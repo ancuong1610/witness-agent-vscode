@@ -1,4 +1,5 @@
 <img width="1197" height="759" alt="Screenshot 2026-05-18 at 23 14 57" src="https://github.com/user-attachments/assets/9fbe3bf2-a628-4fc6-a009-a0ca9a60e757" />
+
 # Witness Agent
 
 Witness Agent is a VS Code background continuity assistant for AI-assisted coding workflows.
