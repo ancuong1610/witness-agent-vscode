@@ -1,0 +1,178 @@
+{
+  "name": "witness-agent",
+  "displayName": "Witness Agent",
+  "description": "A VS Code extension that creates a repo-local .witness/ continuity system for AI-assisted coding workflows.",
+  "version": "0.1.0",
+  "publisher": "witness-agent",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other",
+    "AI"
+  ],
+  "keywords": [
+    "copilot",
+    "context",
+    "handover",
+    "ai-coding",
+    "witness"
+  ],
+  "main": "./out/extension.js",
+  "activationEvents": [
+    "workspaceContains:.witness/index.md",
+    "onCommand:witness.initProject",
+    "onCommand:witness.startSession",
+    "onCommand:witness.recordContext",
+    "onCommand:witness.observeWorkspace",
+    "onCommand:witness.createADR",
+    "onCommand:witness.recordSubagent",
+    "onCommand:witness.assessRisk",
+    "onCommand:witness.generateHandover",
+    "onCommand:witness.validateHandover",
+    "onCommand:witness.createResumeProbe",
+    "onCommand:witness.compressState",
+    "onCommand:witness.startSubagentTask",
+    "onCommand:witness.createSubagentContextPacket",
+    "onCommand:witness.recordSubagentEvidence",
+    "onCommand:witness.completeSubagentTask",
+    "onCommand:witness.reviewSubagentTask",
+    "onCommand:witness.createContextPacket",
+    "onCommand:witness.showWorkspaceStatus",
+    "onCommand:witness.checkpointNow",
+    "onCommand:witness.prepareSessionSwitch",
+    "onCommand:witness.resumeSession",
+    "onCommand:witness.generateEvaluationSummary",
+    "onCommand:witness.resolveContinuityIssue"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "witness.initProject",
+        "title": "Initialize Project",
+        "category": "Witness"
+      },
+      {
+        "command": "witness.startSession",
+        "title": "Start Session",
+        "category": "Witness"
+      },
+      {
+        "command": "witness.recordContext",
+        "title": "Record Context Snapshot",
+        "category": "Witness"
+      },
+      {
+        "command": "witness.observeWorkspace",
+        "title": "Observe Workspace",
+        "category": "Witness"
+      },
+      {
+        "command": "witness.createADR",
+        "title": "Create ADR",
+        "category": "Witness"
+      },
+      {
+        "command": "witness.recordSubagent",
+        "title": "Record Subagent Report",
+        "category": "Witness"
+      },
+      {
+        "command": "witness.assessRisk",
+        "title": "Assess Continuity Risk",
+        "category": "Witness"
+      },
+      {
+        "command": "witness.generateHandover",
+        "title": "Generate Handover",
+        "category": "Witness"
+      },
+      {
+        "command": "witness.validateHandover",
+        "title": "Validate Handover",
+        "category": "Witness"
+      },
+      {
+        "command": "witness.createResumeProbe",
+        "title": "Create Resume Probe",
+        "category": "Witness"
+      },
+      {
+        "command": "witness.compressState",
+        "title": "Compress Current State",
+        "category": "Witness"
+      },
+      {
+        "command": "witness.startSubagentTask",
+        "title": "Start Subagent Task",
+        "category": "Witness"
+      },
+      {
+        "command": "witness.createSubagentContextPacket",
+        "title": "Create Subagent Context Packet",
+        "category": "Witness"
+      },
+      {
+        "command": "witness.recordSubagentEvidence",
+        "title": "Record Subagent Evidence",
+        "category": "Witness"
+      },
+      {
+        "command": "witness.completeSubagentTask",
+        "title": "Complete Subagent Task",
+        "category": "Witness"
+      },
+      {
+        "command": "witness.reviewSubagentTask",
+        "title": "Review Subagent Task",
+        "category": "Witness"
+      },
+      {
+        "command": "witness.createContextPacket",
+        "title": "Create Context Packet",
+        "category": "Witness"
+      },
+      {
+        "command": "witness.showWorkspaceStatus",
+        "title": "Show Workspace Status",
+        "category": "Witness"
+      },
+      {
+        "command": "witness.checkpointNow",
+        "title": "Checkpoint Now",
+        "category": "Witness"
+      },
+      {
+        "command": "witness.prepareSessionSwitch",
+        "title": "Prepare Session Switch",
+        "category": "Witness"
+      },
+      {
+        "command": "witness.resumeSession",
+        "title": "Resume Session",
+        "category": "Witness"
+      },
+      {
+        "command": "witness.generateEvaluationSummary",
+        "title": "Generate Evaluation Summary",
+        "category": "Witness"
+      },
+      {
+        "command": "witness.resolveContinuityIssue",
+        "title": "Resolve Continuity Issue",
+        "category": "Witness"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.85.0",
+    "@types/node": "^20.x",
+    "typescript": "^5.3.0"
+  }
+}
