@@ -44,7 +44,11 @@
     "onCommand:witness.prepareSessionSwitch",
     "onCommand:witness.resumeSession",
     "onCommand:witness.generateEvaluationSummary",
-    "onCommand:witness.resolveContinuityIssue"
+    "onCommand:witness.resolveContinuityIssue",
+    "onCommand:witness.enableProject",
+    "onCommand:witness.startTrackingTask",
+    "onCommand:witness.createCheckpoint",
+    "onCommand:witness.resumeWithWitness"
   ],
   "contributes": {
     "commands": [
@@ -161,6 +165,26 @@
       {
         "command": "witness.resolveContinuityIssue",
         "title": "Resolve Continuity Issue",
+        "category": "Witness"
+      },
+      {
+        "command": "witness.enableProject",
+        "title": "Enable for This Project",
+        "category": "Witness"
+      },
+      {
+        "command": "witness.startTrackingTask",
+        "title": "Start Tracking This Task",
+        "category": "Witness"
+      },
+      {
+        "command": "witness.createCheckpoint",
+        "title": "Create Checkpoint",
+        "category": "Witness"
+      },
+      {
+        "command": "witness.resumeWithWitness",
+        "title": "Resume with Witness",
         "category": "Witness"
       }
     ]

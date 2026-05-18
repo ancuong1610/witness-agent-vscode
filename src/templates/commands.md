@@ -12,6 +12,125 @@ Core principle: store broadly, compress carefully, load minimally, validate resu
 
 ---
 
+## Group 0: Beginner Commands (v5.1)
+
+These four commands are the recommended starting point for new users. They wrap existing Witness
+logic with plain-language names and guided messages. Advanced commands (Groups 1–8) remain fully
+available and are unchanged.
+
+A Witness session is a project work record, not a Copilot/Claude/Codex chat session.
+Starting a new Witness session does not require opening a new coding-agent chat.
+
+---
+
+### Witness: Enable for This Project
+
+**Command ID**: `witness.enableProject`
+
+Beginner-friendly wrapper around project initialization. Creates the `.witness/` directory
+structure in the current workspace root, including all template and harness files. Uses
+plain-language messages and shows a next-step prompt on success.
+
+If `.witness/` already exists, exits gracefully with a friendly message without overwriting
+anything. If no workspace folder is open, shows an error.
+
+After successful enable, shows:
+`Witness is enabled. Next: run "Witness: Start Tracking This Task".`
+
+Delegates all directory and file creation to the same core used by `witness.initProject`.
+Emits telemetry event `witness.project.enabled`.
+
+---
+
+### Witness: Start Tracking This Task
+
+**Command ID**: `witness.startTrackingTask`
+
+Beginner-friendly entry point for starting a Witness session. Asks only one question:
+`What are you working on?`
+
+Validates the task goal:
+- If empty or cancelled, exits without writing anything.
+- If fewer than 10 characters or a generic term (e.g. `work`, `continue`, `fix stuff`),
+  shows a warning: `A bit more detail helps Witness track your work.`
+  Offers: `Continue Anyway`, `Edit Goal`, or `Cancel`.
+
+After a valid goal is entered:
+1. Creates a Witness session record in `.witness/sessions/` using `session-template.md`.
+2. Opens an unsaved markdown editor tab containing a copy-ready coding-agent prompt with
+   the task goal substituted.
+3. Shows a notification with a `Copy Prompt` action for one-click clipboard copy.
+
+Does not open the session file in the editor.
+Does not update `current-state.md` automatically (v5.1a scope).
+Does not inject context into any coding agent.
+
+Requires `.witness/` to exist (run `Witness: Enable for This Project` first).
+Emits telemetry event `witness.task_tracking.started` with attributes: `goal_length`,
+`used_generic_goal_warning`, `prompt_opened`, `copied_to_clipboard`.
+
+---
+
+### Witness: Create Checkpoint
+
+**Command ID**: `witness.createCheckpoint`
+
+Beginner-friendly checkpoint wrapper. Saves enough project memory so a later AI coding session
+can understand what changed.
+
+Steps:
+1. Checks that Witness is enabled in this project.
+2. If no active task session is found, warns and offers Cancel or Continue.
+3. Runs `Witness: Observe Workspace` to capture the current git state.
+4. Asks: Open Current State for Update, or Skip Current State Update.
+5. If update is chosen, runs `Witness: Compress Current State` (archives current-state.md and
+   opens it for manual trimming).
+6. Shows: `Witness: Checkpoint created.`
+
+Does not automatically run Assess Continuity Risk, Generate Handover, or Create Context Packet.
+If inner commands fail (e.g. no active session), the checkpoint workflow continues and the inner
+command's own error messages are shown.
+
+Emits telemetry event `witness.checkpoint.created` with attributes: `ran_observe_workspace`,
+`ran_compress_state`, `completed`, `cancelled_at`.
+
+---
+
+### Witness: Resume with Witness
+
+**Command ID**: `witness.resumeWithWitness`
+
+Beginner-friendly resume helper. Generates a copy-ready coding-agent prompt pre-loaded with the
+standard Witness read set. The user pastes the prompt into any AI coding agent (Claude, Copilot,
+Codex, Cursor, etc.) to begin a new session with full Witness context.
+
+Does not require an active session.
+
+Default read set used in the prompt:
+- `.witness/index.md`
+- `.witness/current-state.md`
+- `.witness/handovers/latest.md`
+
+If a reviewed context packet is found in `.witness/sessions/`, its workspace-relative path is
+appended to the prompt body so the coding agent can locate it without manual input. The
+notification also calls it out explicitly: `Optional reviewed context packet detected: <path>`.
+The default read set is always included regardless.
+
+Steps:
+1. Checks that Witness is enabled in this project.
+2. Scans for the latest context packet (informational; best-effort).
+3. Opens an unsaved markdown editor tab with the copy-ready resume prompt.
+4. Shows a notification with a `Copy Prompt` action for one-click clipboard copy.
+
+Does not inject the prompt into any coding agent automatically.
+Does not read raw telemetry content.
+Does not scan all `.witness/` files.
+
+Emits telemetry event `witness.resume_prompt.generated` with attributes:
+`context_packet_detected`, `prompt_opened`, `copied_to_clipboard`, `completed`, `cancelled_at`.
+
+---
+
 ## Group 1: Project and Session Foundation
 
 ### Witness: Initialize Project

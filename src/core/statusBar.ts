@@ -1,15 +1,15 @@
 // ---------------------------------------------------------------------------
-// statusBar.ts — Witness status bar assistant (v3.4 / v4.3).
+// statusBar.ts — Witness status bar assistant (v5.4a).
 // ---------------------------------------------------------------------------
 //
 // Displays current continuity state in the VS Code status bar and offers a
-// QuickPick of recommended actions when the item is clicked.
+// beginner-first QuickPick of actions when the item is clicked.
 //
-// v4.3 addition: When the workspace has a non-all-clear suggested action, the
-// first QuickPick item is a `Resolve:` / `Address:` item that launches the
-// `Witness: Resolve Continuity Issue` command. This makes the v4 resolver
-// discoverable from the main v3 UX surface without adding any new public
-// commands or emitting telemetry from this module.
+// v5.4 change: QuickPick is restructured into three sections:
+//   Section 1 — Recommended: one context-aware top action.
+//   Section 2 — Beginner Actions: five beginner-safe commands.
+//   Section 3 — Advanced Actions: existing advanced commands.
+// Advanced commands remain available; they are visually separated below.
 //
 // Design invariants:
 //   - One status bar item, created in `initializeWitnessStatusBar` and never
@@ -107,39 +107,119 @@ function statusLabel(status: WitnessWorkspaceStatus | null, hasWorkspace: boolea
 // ---------------------------------------------------------------------------
 
 /**
- * Builds the status bar tooltip text from the current workspace status.
+ * Formats a whole-minutes age value as a human-readable string.
  *
- * No raw artifact content is included. Counts and metadata only.
+ * @param ageMinutes - Age in whole minutes, or `null` if the artifact does not exist.
+ * @returns `"<N> min old"` or `"unknown age"` if `null`.
  */
-function buildTooltip(status: WitnessWorkspaceStatus | null, hasWorkspace: boolean): string {
+function formatAgeMinutes(ageMinutes: number | null): string {
+  if (ageMinutes === null) {
+    return 'unknown age';
+  }
+  return `${ageMinutes} min old`;
+}
+
+/**
+ * Formats an artifact existence + age pair as a short status string.
+ *
+ * @param exists     - Whether the artifact file exists.
+ * @param ageMinutes - Age in whole minutes, or `null`.
+ * @returns `"missing"` or `"exists, <N> min old"` / `"exists, unknown age"`.
+ */
+function formatExistsAge(exists: boolean, ageMinutes: number | null): string {
+  if (!exists) {
+    return 'missing';
+  }
+  return `exists, ${formatAgeMinutes(ageMinutes)}`;
+}
+
+/**
+ * Builds a rich MarkdownString tooltip for the Witness status bar item.
+ *
+ * Covers: status label, active session, suggested action + reason, artifact
+ * ages (current-state, handover, context packet + mandatory-marker flag),
+ * subagent health counts (including loop-risk when non-zero), and telemetry
+ * state.
+ *
+ * No raw artifact contents are included. Counts and metadata only.
+ * Never throws — all field access is guarded.
+ *
+ * @param status       - Most recently computed workspace status, or `null`.
+ * @param hasWorkspace - Whether a workspace folder is currently open.
+ * @returns A `vscode.MarkdownString` suitable for `StatusBarItem.tooltip`.
+ */
+function buildTooltip(
+  status: WitnessWorkspaceStatus | null,
+  hasWorkspace: boolean
+): vscode.MarkdownString {
+  const md = new vscode.MarkdownString();
+
+  // No workspace open.
   if (!hasWorkspace) {
-    return 'Witness: No workspace folder is open.';
+    md.appendMarkdown('No workspace folder is open.');
+    return md;
   }
+
+  // Status computation failed or not yet run.
   if (status === null) {
-    return 'Witness could not compute workspace status. Run Witness: Show Workspace Status for details.';
+    md.appendMarkdown(
+      'Witness: status not computed yet. Click to open Witness actions.'
+    );
+    return md;
   }
 
-  const lines: string[] = [];
+  // --- Title: current status bar label ---
+  const label = statusLabel(status, true);
+  md.appendMarkdown(`**${label}**\n\n`);
 
-  lines.push(`Session: ${status.activeSessionId ?? 'none'}`);
-  lines.push('');
+  // --- Session ---
+  const sessionText = status.activeSessionId ?? 'none';
+  md.appendMarkdown(`Active session: \`${sessionText}\`\n`);
 
-  lines.push(`Action: ${status.suggestedAction.label}`);
-  lines.push(`Reason: ${status.suggestedAction.reason}`);
-  lines.push('');
+  // --- Suggested action ---
+  md.appendMarkdown(`Suggested action: ${status.suggestedAction.label}\n\n`);
+  md.appendMarkdown(`Reason:\n${status.suggestedAction.reason}\n\n`);
 
-  if (status.latestRiskLevel !== null) {
-    lines.push(`Risk level: ${status.latestRiskLevel}`);
+  // --- Artifact ages ---
+  md.appendMarkdown(
+    `Current state: ${formatExistsAge(status.currentStateExists, status.currentStateAgeMinutes)}\n`
+  );
+  md.appendMarkdown(
+    `Latest handover: ${formatExistsAge(status.latestHandoverExists, status.latestHandoverAgeMinutes)}\n`
+  );
+
+  // Context packet — include mandatory-marker status when the file exists.
+  let cpText = formatExistsAge(
+    status.latestContextPacketExists,
+    status.latestContextPacketAgeMinutes
+  );
+  if (status.latestContextPacketExists) {
+    if (status.latestContextPacketHasMandatoryMarkers === true) {
+      cpText += ', mandatory markers present';
+    } else if (status.latestContextPacketHasMandatoryMarkers === false) {
+      cpText += ', no markers';
+    }
   }
+  md.appendMarkdown(`Context packet: ${cpText}\n\n`);
 
-  lines.push(`Pending subagent reviews: ${status.pendingSubagentReviews}`);
-  lines.push(`Incomplete subagent ledgers: ${status.incompleteSubagentLedgers}`);
-  lines.push(`Blocked or failed subagents: ${status.blockedOrFailedSubagents}`);
-  lines.push('');
+  // --- Subagent health ---
+  const loopRisk = status.subagentHealthSummary.loopRiskCount;
+  md.appendMarkdown('Subagents:\n');
+  md.appendMarkdown(`- Pending reviews: ${status.pendingSubagentReviews}\n`);
+  md.appendMarkdown(`- Incomplete ledgers: ${status.incompleteSubagentLedgers}\n`);
+  md.appendMarkdown(`- Blocked/failed: ${status.blockedOrFailedSubagents}\n`);
+  if (loopRisk > 0) {
+    md.appendMarkdown(`- Loop-risk: ${loopRisk}\n`);
+  }
+  md.appendMarkdown('\n');
 
-  lines.push(`Telemetry events: ${status.telemetryEventCount}`);
+  // --- Telemetry ---
+  const telemetryText = status.telemetryEventsExists ? 'active' : 'inactive';
+  md.appendMarkdown(`Telemetry: ${telemetryText}\n\n`);
 
-  return lines.join('\n');
+  md.appendMarkdown('Click for actions.');
+
+  return md;
 }
 
 // ---------------------------------------------------------------------------
@@ -170,72 +250,147 @@ function statusColor(
 // QuickPick items
 // ---------------------------------------------------------------------------
 
+/**
+ * Extended QuickPickItem used by the status bar handler.
+ *
+ * `commandId` is optional so that separator items (which are never selected
+ * and never executed) can be included in the same array type. The
+ * `openStatusActions` handler guards for a missing `commandId` before calling
+ * `executeCommand`.
+ */
 interface StatusQuickPickItem extends vscode.QuickPickItem {
-  commandId: string;
+  commandId?: string;
 }
 
+// ---------------------------------------------------------------------------
+// Recommended item builder
+// ---------------------------------------------------------------------------
+
 /**
- * Builds a resolver QuickPick item for the status bar, or returns `null` if
- * the current workspace state is all-clear or status is unavailable.
+ * Determines and builds the single "Recommended" QuickPick item for the
+ * current workspace state.
  *
- * Uses the `resolveTopIssue` plan's `whatHappened` field as the item
- * description so the developer sees the concrete issue before selecting.
- * Wraps the call in a try/catch — a resolver failure never breaks the status
- * bar QuickPick. Falls back to a generic description if the call throws.
+ * Selection priority (v5.4 spec):
+ *   1. `status === null`                        → Show Workspace Status
+ *   2. `status.activeSessionId === null`        → Start Tracking This Task
+ *   3. `suggestedAction.id !== 'all-clear'`     → Resolve: <label>
+ *      Description: resolver plan `whatHappened`, fallback to `reason`.
+ *   4. All-clear with active session            → Create Checkpoint
  *
- * Label prefix:
- *   - `warning` or `critical` severity → `Resolve: <suggestedAction.label>`
- *   - `info` (non-all-clear)           → `Address: <suggestedAction.label>`
+ * Wraps `resolveTopIssue` in try/catch — a resolver failure never breaks
+ * the status bar QuickPick.
  */
-function buildResolverItem(
+function buildRecommendedItem(
   status: WitnessWorkspaceStatus | null
-): StatusQuickPickItem | null {
+): StatusQuickPickItem {
+  // Case 1: no status available.
   if (status === null) {
-    return null;
-  }
-  if (status.suggestedAction.id === 'all-clear') {
-    return null;
+    return {
+      label: 'Witness: Show Workspace Status',
+      description: 'Open the detailed Witness status report.',
+      commandId: 'witness.showWorkspaceStatus',
+    };
   }
 
-  const { severity, label } = status.suggestedAction;
-  const prefix = (severity === 'warning' || severity === 'critical')
-    ? 'Resolve'
-    : 'Address';
+  // Case 2: no active session — prompt to start one.
+  if (status.activeSessionId === null) {
+    return {
+      label: 'Start Tracking This Task',
+      description: 'Begin a tracked work block and get a coding-agent prompt.',
+      commandId: 'witness.startTrackingTask',
+    };
+  }
 
-  let description = 'Open the guided resolver for the current Witness issue.';
-  try {
-    const plan = resolveTopIssue(status);
-    if (plan.whatHappened && plan.whatHappened.length > 0) {
-      description = plan.whatHappened;
+  // Case 3: non-all-clear issue — offer the resolver.
+  if (status.suggestedAction.id !== 'all-clear') {
+    let description = status.suggestedAction.reason;
+    try {
+      const plan = resolveTopIssue(status);
+      if (plan.whatHappened && plan.whatHappened.length > 0) {
+        description = plan.whatHappened;
+      }
+    } catch {
+      // resolveTopIssue failure is non-fatal — fall back to reason above.
     }
-  } catch {
-    // resolveTopIssue failure is non-fatal — use generic description above.
+    return {
+      label: `Resolve: ${status.suggestedAction.label}`,
+      description,
+      commandId: 'witness.resolveContinuityIssue',
+    };
   }
 
+  // Case 4: all-clear with active session — checkpoint is the safe next step.
   return {
-    label: `${prefix}: ${label}`,
-    description,
-    commandId: 'witness.resolveContinuityIssue',
+    label: 'Create Checkpoint',
+    description: 'Save progress so a future AI session can resume safely.',
+    commandId: 'witness.createCheckpoint',
   };
 }
 
+// ---------------------------------------------------------------------------
+// QuickPick list builder
+// ---------------------------------------------------------------------------
+
 /**
- * Builds the QuickPick item list for the status bar click handler.
+ * Builds the beginner-first QuickPick item list for the status bar (v5.4).
  *
- * Order (v4.3):
- *   1. Resolver item — if `suggestedAction.id !== 'all-clear'` (first, always).
- *   2. Suggested action item — if it has a commandId and differs from resolver.
- *   3. Fixed utility commands — deduplicated against resolver and suggested.
+ * Structure:
+ *   Separator — "Recommended"
+ *     One context-aware top action.
+ *   Separator — "Beginner Actions"
+ *     Five beginner-safe commands, deduplicated against recommended.
+ *   Separator — "Advanced Actions"
+ *     Existing advanced commands, deduplicated against recommended and beginner.
+ *
+ * Separator items use `vscode.QuickPickItemKind.Separator` and have no
+ * `commandId`. The handler guards for this before calling `executeCommand`.
  */
 function buildQuickPickItems(
   status: WitnessWorkspaceStatus | null
 ): StatusQuickPickItem[] {
-  const fixed: StatusQuickPickItem[] = [
+  const recommended = buildRecommendedItem(status);
+  const recommendedId = recommended.commandId;
+
+  // --- Section 2: Beginner Actions ---
+  // Five beginner-safe commands, deduplicated against the recommended item.
+  const beginnerCandidates: StatusQuickPickItem[] = [
+    {
+      label: 'Witness: Start Tracking This Task',
+      description: 'Begin a tracked work block and get a coding-agent prompt.',
+      commandId: 'witness.startTrackingTask',
+    },
+    {
+      label: 'Witness: Create Checkpoint',
+      description: 'Save enough project memory for a later AI session.',
+      commandId: 'witness.createCheckpoint',
+    },
+    {
+      label: 'Witness: Resume with Witness',
+      description: 'Generate a copy-ready resume prompt.',
+      commandId: 'witness.resumeWithWitness',
+    },
+    {
+      label: 'Witness: Resolve Continuity Issue',
+      description: 'Explain and resolve the current top Witness issue.',
+      commandId: 'witness.resolveContinuityIssue',
+    },
     {
       label: 'Witness: Show Workspace Status',
-      description: 'View full continuity status report',
+      description: 'Open the detailed Witness status report.',
       commandId: 'witness.showWorkspaceStatus',
     },
+  ];
+  const beginnerItems = beginnerCandidates.filter(
+    item => item.commandId !== recommendedId
+  );
+
+  // --- Section 3: Advanced Actions ---
+  // Deduplicated against recommended and all beginner items shown.
+  const knownIds = new Set<string | undefined>([
+    recommendedId,
+    ...beginnerItems.map(i => i.commandId),
+  ]);
+  const advancedCandidates: StatusQuickPickItem[] = [
     {
       label: 'Witness: Start Session',
       description: 'Begin a new tracked session',
@@ -271,45 +426,35 @@ function buildQuickPickItems(
       description: 'Review a completed subagent task report',
       commandId: 'witness.reviewSubagentTask',
     },
+    {
+      label: 'Witness: Prepare Session Switch',
+      description: 'Run the full pre-switch artifact sequence',
+      commandId: 'witness.prepareSessionSwitch',
+    },
+    {
+      label: 'Witness: Generate Evaluation Summary',
+      description: 'Generate a session evaluation summary',
+      commandId: 'witness.generateEvaluationSummary',
+    },
   ];
+  const advancedItems = advancedCandidates.filter(
+    item => !knownIds.has(item.commandId)
+  );
 
-  // All-clear / no status: no resolver item. Fall through to suggested+fixed.
-  const resolverItem = buildResolverItem(status);
+  // --- Assemble ---
+  const separator = (label: string): StatusQuickPickItem => ({
+    label,
+    kind: vscode.QuickPickItemKind.Separator,
+  });
 
-  if (status === null) {
-    return fixed;
-  }
-
-  const action = status.suggestedAction;
-
-  // Build suggested action item if it has a commandId.
-  let suggestedItem: StatusQuickPickItem | null = null;
-  if (action.commandId) {
-    suggestedItem = {
-      label: action.label,
-      description: `Suggested — ${action.reason}`,
-      commandId: action.commandId,
-    };
-  }
-
-  // Collect commandIds already represented at the top so fixed items are
-  // deduplicated correctly.
-  const topCommandIds = new Set<string>(['witness.resolveContinuityIssue']);
-  if (suggestedItem) {
-    topCommandIds.add(suggestedItem.commandId);
-  }
-  const deduped = fixed.filter(item => !topCommandIds.has(item.commandId));
-
-  // Assemble: resolver first (if non-null), then suggested, then deduped fixed.
-  const result: StatusQuickPickItem[] = [];
-  if (resolverItem !== null) {
-    result.push(resolverItem);
-  }
-  if (suggestedItem !== null) {
-    result.push(suggestedItem);
-  }
-  result.push(...deduped);
-  return result;
+  return [
+    separator('Recommended'),
+    recommended,
+    separator('Beginner Actions'),
+    ...beginnerItems,
+    separator('Advanced Actions'),
+    ...advancedItems,
+  ];
 }
 
 // ---------------------------------------------------------------------------
@@ -371,7 +516,9 @@ async function openStatusActions(): Promise<void> {
     placeHolder: 'Select an action',
   });
 
-  if (!picked) {
+  // Guard: separators have no commandId and are never returned by showQuickPick,
+  // but check defensively to satisfy TypeScript and future-proof the handler.
+  if (!picked || !picked.commandId) {
     return;
   }
 

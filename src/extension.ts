@@ -1,6 +1,10 @@
 import * as vscode from 'vscode';
 import { initProject } from './commands/initProject';
+import { enableProject } from './commands/enableProject';
 import { startSession } from './commands/startSession';
+import { startTrackingTask } from './commands/startTrackingTask';
+import { createCheckpoint } from './commands/createCheckpoint';
+import { resumeWithWitness } from './commands/resumeWithWitness';
 import { recordContext } from './commands/recordContext';
 import { observeWorkspace } from './commands/observeWorkspace';
 import { createADR } from './commands/createADR';
@@ -199,7 +203,40 @@ export function activate(context: vscode.ExtensionContext): void {
   );
   context.subscriptions.push(resolveContinuityIssueCmd);
 
-  // 23 public commands registered (18 v1/v2/v3.1 + 3 v3.5 guided workflows + 1 v3.6 + 1 v4.2).
+  // -------------------------------------------------------------------------
+  // v5.1a — Beginner Command Layer.
+  // -------------------------------------------------------------------------
+  // These four commands wrap existing session and init logic with plain-language
+  // names and beginner-friendly messages. They do not change any existing
+  // advanced command behavior.
+  // Public command count: 23 → 25 (v5.1a adds enableProject + startTrackingTask).
+  // -------------------------------------------------------------------------
+
+  const enableProjectCmd = vscode.commands.registerCommand(
+    'witness.enableProject',
+    () => enableProject(context)
+  );
+  context.subscriptions.push(enableProjectCmd);
+
+  const startTrackingTaskCmd = vscode.commands.registerCommand(
+    'witness.startTrackingTask',
+    () => startTrackingTask(context)
+  );
+  context.subscriptions.push(startTrackingTaskCmd);
+
+  const createCheckpointCmd = vscode.commands.registerCommand(
+    'witness.createCheckpoint',
+    () => createCheckpoint(context)
+  );
+  context.subscriptions.push(createCheckpointCmd);
+
+  const resumeWithWitnessCmd = vscode.commands.registerCommand(
+    'witness.resumeWithWitness',
+    () => resumeWithWitness(context)
+  );
+  context.subscriptions.push(resumeWithWitnessCmd);
+
+  // 27 public commands registered (23 pre-v5 + 2 v5.1a + 2 v5.1b beginner commands).
 
   // -------------------------------------------------------------------------
   // v3.4 — Status Bar Assistant.
