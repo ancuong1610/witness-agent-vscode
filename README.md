@@ -71,35 +71,26 @@ Witness is not published to the VS Code Marketplace yet. Run it locally from thi
 
 4. In the Extension Development Host, open the project you want Witness to assist.
 
-5. Open the Command Palette with `Cmd+Shift+P` on macOS or `Ctrl+Shift+P` on Windows/Linux.
-
-6. Run:
-
-   ```text
-   Witness: Enable for This Project
-   ```
-
-This creates `.witness/` in the project and opens the beginner onboarding page.
-
-If a project already has `.witness/index.md`, Witness activates automatically when that workspace
-opens.
+After the Extension Development Host is open, continue with the first-time workflow below.
 
 ---
 
 ## First-Time Workflow
 
-Use this flow the first time you try Witness on a project.
+Use this flow inside the Extension Development Host after opening the project you want Witness to
+assist.
 
 ### 1. Enable Witness
 
-Run:
+Open the Command Palette with `Cmd+Shift+P` on macOS or `Ctrl+Shift+P` on Windows/Linux, then run:
 
 ```text
 Witness: Enable for This Project
 ```
 
-Witness creates the `.witness/` folder and installs the starter files that explain how project
-memory should be read and maintained.
+This creates `.witness/` in the project and opens the beginner onboarding page.
+
+If `.witness/index.md` already exists, Witness activates automatically when the workspace opens.
 
 ### 2. Start Tracking Your Task
 
