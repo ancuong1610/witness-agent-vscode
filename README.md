@@ -10,7 +10,8 @@ decided, which files were mid-edit, what subagents were dispatched, and why cert
 exist. Decisions, context, delegated work, and handovers can be silently lost at every session
 boundary.
 
-Witness addresses this by externalizing continuity into `.witness/`: a local structured artifacts that a fresh coding-agent session can load selectively to resume safely.
+Witness addresses this by externalizing continuity into `.witness/`: a repo-local directory of
+structured artifacts that a fresh coding-agent session can load selectively to resume safely.
 
 You keep coding normally with Copilot, Claude Code, Codex, Superpowers, or another coding agent.
 Witness runs in the background and helps your coding agent remember the project safely.
@@ -28,7 +29,6 @@ Witness sits between your project and your coding agent.
 
 <img width="6190" height="1973" alt="mermaid-diagram (1)" src="https://github.com/user-attachments/assets/ca44f06f-adae-453c-a048-8628f88be448" />
 
-
 The boundary is simple:
 
 - You keep coding in your normal coding agent.
@@ -42,7 +42,8 @@ No automatic prompt injection happens. No hidden AI provider call happens.
 
 ## Installation And Local Setup
 
-Witness is not published to the VS Code Marketplace yet. Run it locally from this repository.
+Witness is not published to the VS Code Marketplace yet. For now, run it locally from this
+repository.
 
 1. Clone and install:
 
@@ -59,6 +60,9 @@ Witness is not published to the VS Code Marketplace yet. Run it locally from thi
 4. In the Extension Development Host, open the project you want Witness to assist.
 
 After the Extension Development Host is open, continue with the first-time workflow below.
+
+This local setup is intended for development and early public testing. Marketplace installation
+instructions will replace this section when the extension is published.
 
 ---
 
@@ -491,7 +495,7 @@ These limits are part of the design. Witness keeps continuity visible and review
 
 ## Current Status
 
-v6 is complete.
+Witness is currently an early public project. v6 is complete.
 
 - 29 public commands
 - 30 activation events
@@ -499,6 +503,20 @@ v6 is complete.
 - beginner workflow implemented
 - status bar guidance implemented
 - agent-assisted artifact maintenance implemented
+
+---
+
+## Further Reading
+
+The README is the first-user guide. Deeper implementation and workflow notes live in `docs/`.
+
+| Document | Purpose |
+|----------|---------|
+| `docs/workflow.md` | Full Witness workflow and command phases |
+| `docs/architecture.md` | Extension architecture and artifact system |
+| `docs/product-ux-principles.md` | Product boundaries and UX principles |
+| `docs/v6-implementation-plan.md` | v6 maintenance design and implementation notes |
+| `docs/v6-validation-report.md` | v6 validation results |
 
 ---
 
