@@ -69,13 +69,40 @@ drafts changes.
 
 ## Installation And Local Setup
 
-Witness is not published to the VS Code Marketplace yet. For now, run it locally from this
-repository.
+Witness is not published to the VS Code Marketplace yet. For now, install it from a local VSIX file
+or run it locally from this repository.
+
+### Install From VSIX
+
+Build the shareable extension package:
+
+```bash
+npm install
+npm run package:vsix
+```
+
+This creates a file named like:
+
+```text
+witness-agent-0.1.0.vsix
+```
+
+Send that `.vsix` file to another developer. They can install it from VS Code by running
+`Extensions: Install from VSIX...` from the Command Palette, or from the command line:
+
+```bash
+code --install-extension witness-agent-0.1.0.vsix
+```
+
+After installing, open the project you want Witness to assist and continue with the first-time
+workflow below.
+
+### Run From Source
 
 1. Clone and install:
 
    ```bash
-   git clone <repo-url>
+   git clone https://github.com/ancuong1610/witness-agent-vscode.git
    cd witness-agent-vscode
    npm install
    ```
