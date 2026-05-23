@@ -39,21 +39,8 @@ Witness runs in the background and helps your coding agent remember the project 
 
 Witness sits between your project and your coding agent.
 
-```text
-You in VS Code
-    |
-    | run Witness commands
-    v
-Witness extension
-    |
-    | creates and checks .witness/ files
-    v
-Repo-local project memory
-    |
-    | pasted into your coding agent when you choose
-    v
-Copilot / Claude Code / Codex / Superpowers / other agent
-```
+<img width="6151" height="1543" alt="mermaid-diagram" src="https://github.com/user-attachments/assets/d173a1d0-4859-4230-8296-8ef6649414a7" />
+
 
 The boundary is simple:
 
