@@ -4,6 +4,7 @@ import * as vscode from 'vscode';
  * Subdirectories created under `.witness/` during initialization.
  * `templates` holds the bundled template copies.
  * `harness` holds the agent harness protocol files (v4.6 Agent Harness Pack).
+ * `checkpoints` holds checkpoint files created during active sessions (v6.3).
  * The rest hold runtime records.
  */
 export const WITNESS_SUBDIRS = [
@@ -15,6 +16,7 @@ export const WITNESS_SUBDIRS = [
   'decisions',
   'handovers',
   'evaluation',
+  'checkpoints',
 ] as const;
 
 /**

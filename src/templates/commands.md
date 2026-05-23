@@ -558,3 +558,115 @@ No LLM calls. No raw transcript capture. No hidden reasoning capture.
 Emits telemetry event `witness.continuity_issue.resolved` with attributes: `issue_kind`,
 `severity`, `selected_action_label`, `selected_action_command_id`, `was_primary`,
 `artifact_paths_opened`, `evidence_count`, `completed`, and `cancelled_at`.
+
+---
+
+## Group 9: Agent-Assisted Artifact Maintenance (v6)
+
+These commands support the v6 agent-assisted maintenance workflow. The developer does not
+manually write `.witness/` artifacts during normal coding. Witness detects maintenance needs,
+generates safe prompts for the active coding agent, and validates the results before asking
+for developer approval.
+
+Core principle: LLM may draft. Witness validates. Developer approves.
+
+---
+
+### Witness: Update Project Memory with Agent
+
+**Command ID:** `witness.updateProjectMemoryWithAgent`
+
+Generates a strict artifact-maintenance prompt for your active coding agent. The prompt
+restricts the agent to `.witness/` artifact work and requires human review.
+
+**Behavior:**
+
+1. Computes the current workspace status.
+2. Determines the most relevant Witness maintenance need (stale current-state, missing
+   checkpoint, recommended handover, pending subagent review, or resume orientation).
+3. If project memory is fully up to date, shows a confirmation and exits.
+4. If Witness is not enabled, shows an error directing the developer to enable it first.
+5. Generates a complete artifact-maintenance prompt specifying:
+   - The role and task for the coding agent.
+   - Which `.witness/` files to read.
+   - Which files the agent is allowed to write (artifact-only).
+   - Which files are explicitly forbidden (all source code).
+   - Which sections the output artifact must contain.
+   - The human review requirement before any file is written.
+6. Opens the prompt in an unsaved markdown tab.
+7. Shows a notification with a one-click `Copy Prompt` action.
+
+**What this command does not do:**
+
+- Does not call any LLM.
+- Does not write to `.witness/` or any source file.
+- Does not inject content into any coding agent.
+- Does not validate the resulting artifact (use `Witness: Validate Artifact Maintenance`
+  after the coding agent has completed the task).
+
+**After using this command:**
+
+1. Copy the prompt from the tab or notification.
+2. Paste it into your active coding agent (Claude, Copilot, Codex, Cursor, or equivalent).
+3. The agent will draft the `.witness/` artifact and present it for your review.
+4. Review the draft and approve or request revisions.
+5. Run `Witness: Validate Artifact Maintenance` to confirm the artifact is well-formed.
+
+No LLM calls. No automatic context injection. No source-code modification.
+
+Emits telemetry event `witness.artifact_maintenance.prompt_generated` with attributes:
+`maintenance_kind`, `severity`, `evidence_count`, `active_session_present`,
+`prompt_opened`, `copied_to_clipboard`, `completed`, `cancelled_at`.
+
+---
+
+### Witness: Validate Artifact Maintenance
+
+**Command ID:** `witness.validateArtifactMaintenance`
+
+Validates that a recent agent-assisted artifact-maintenance task stayed inside the `.witness/`
+boundary and produced the required artifact structure.
+
+**Behavior:**
+
+1. Detects changed files from git (working tree dirty files) if available, or prompts the
+   developer to enter file paths manually (one per line or comma-separated).
+2. Asks the developer which kind of maintenance was performed, via a QuickPick:
+   - Update current-state
+   - Create checkpoint
+   - Prepare handover
+   - Review subagent artifacts
+   - Resume with Witness
+   - Skip section validation (boundary check only)
+3. Reads the contents of changed `.witness/` markdown files only. Skips source files,
+   telemetry files, and non-markdown files.
+4. Runs the deterministic artifact maintenance validator, which checks:
+   - File boundary: any file outside `.witness/` triggers a critical failure.
+   - Empty change list: warns that no changed files were detected.
+   - Required sections: checks that the generated artifact contains all required
+     markdown section headings for the selected maintenance kind.
+   - Mandatory markers: warns if any artifact contains unresolved placeholders
+     (`TODO`, `TBD`, `{{`, `}}`, `[FILL`, `<...>`).
+5. Opens an unsaved markdown validation report containing: status, summary, changed
+   Witness files, changed non-Witness files, issues (with severity and evidence),
+   and a next-step recommendation.
+6. Shows a status notification (passed / warning / failed).
+
+**Validation statuses:**
+
+- `passed` — only `.witness/` files changed, required sections are present, no markers.
+- `warning` — no files detected, missing sections, or unresolved placeholders. Review recommended.
+- `failed` — non-`.witness/` files were modified. Do not trust the artifact update.
+
+**What this command does not do:**
+
+- Does not call any LLM.
+- Does not write to `.witness/` or any source file.
+- Does not automatically approve or reject agent-generated artifacts.
+- Does not read source files or telemetry files.
+
+No LLM calls. No automatic approval. No source-code modification.
+
+Emits telemetry event `witness.artifact_maintenance.validated` with attributes:
+`status`, `issue_count`, `changed_witness_file_count`, `changed_non_witness_file_count`,
+`expected_kind`, `completed`, `cancelled_at`.

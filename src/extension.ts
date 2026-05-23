@@ -5,6 +5,8 @@ import { startSession } from './commands/startSession';
 import { startTrackingTask } from './commands/startTrackingTask';
 import { createCheckpoint } from './commands/createCheckpoint';
 import { resumeWithWitness } from './commands/resumeWithWitness';
+import { updateProjectMemoryWithAgent } from './commands/updateProjectMemoryWithAgent';
+import { validateArtifactMaintenanceCmd } from './commands/validateArtifactMaintenance';
 import { recordContext } from './commands/recordContext';
 import { observeWorkspace } from './commands/observeWorkspace';
 import { createADR } from './commands/createADR';
@@ -236,7 +238,21 @@ export function activate(context: vscode.ExtensionContext): void {
   );
   context.subscriptions.push(resumeWithWitnessCmd);
 
-  // 27 public commands registered (23 pre-v5 + 2 v5.1a + 2 v5.1b beginner commands).
+  // v6.4 — Agent-assisted artifact maintenance command.
+  const updateProjectMemoryWithAgentCmd = vscode.commands.registerCommand(
+    'witness.updateProjectMemoryWithAgent',
+    () => updateProjectMemoryWithAgent(context)
+  );
+  context.subscriptions.push(updateProjectMemoryWithAgentCmd);
+
+  // v6.5 — Artifact maintenance validator command.
+  const validateArtifactMaintenanceCommand = vscode.commands.registerCommand(
+    'witness.validateArtifactMaintenance',
+    () => validateArtifactMaintenanceCmd(context)
+  );
+  context.subscriptions.push(validateArtifactMaintenanceCommand);
+
+  // 29 public commands registered (23 pre-v5 + 2 v5.1a + 2 v5.1b + 1 v6.4 + 1 v6.5).
 
   // -------------------------------------------------------------------------
   // v3.4 — Status Bar Assistant.

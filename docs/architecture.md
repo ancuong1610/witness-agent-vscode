@@ -601,4 +601,118 @@ initialized. Implementation plans for each version record rationale for design c
 - `docs/v2-implementation-plan.md` — v2 telemetry, subagent ledger, context packet
 - `docs/v3-implementation-plan.md` — v3 background layer, UX principle, rule engine
 - `docs/v4-implementation-plan.md` — v4 resolver, status bar integration, activation hotfix, v4.6 harness
+- `docs/v6-implementation-plan.md` — v6 agent-assisted artifact maintenance
 - `docs/product-ux-principles.md` — locked UX principles and automatic/confirmed boundary
+
+---
+
+## The v6 Agent-Assisted Artifact Maintenance Layer
+
+v6 adds agent-assisted artifact maintenance. The developer's active coding agent can draft
+`.witness/` artifact updates using a strict Witness-generated prompt. Witness validates the
+result. The developer approves.
+
+**Core boundary**: LLM may draft. Witness validates. Developer approves.
+
+### New modules
+
+| Module | Role |
+|--------|------|
+| `src/core/maintenanceTriggerEngine.ts` | Pure synchronous function. Computes `MaintenanceNeed` from `WitnessWorkspaceStatus`. 11-rule priority engine. No VS Code import. No I/O. |
+| `src/core/artifactMaintenancePromptGenerator.ts` | Pure function. Zero imports. Generates strict copy-ready prompts for five maintenance kinds. All prompts restrict writes to `.witness/` only and forbid source-code modification. |
+| `src/core/artifactMaintenanceValidator.ts` | Pure synchronous function. No VS Code import. No I/O. Validates changed-file list and artifact content against structural rules. |
+| `src/commands/updateProjectMemoryWithAgent.ts` | Orchestration command. Computes need, generates prompt, opens unsaved markdown tab. Does not call any LLM. Does not write `.witness/`. |
+| `src/commands/validateArtifactMaintenance.ts` | Validation command. Collects changed files (git or manual), reads `.witness/` content, calls validator, opens validation report. |
+| `src/core/statusBar.ts` (v6.6) | Extended to call `computeMaintenanceNeed` and surface `Maintain: <title>` as the recommended action when a need is detected. |
+
+### New harness contracts (v6.3)
+
+Five agent-facing contracts are added to `src/templates/harness/` and installed under
+`.witness/harness/` during `Witness: Enable for This Project`:
+
+| Contract | Maintenance kind |
+|----------|-----------------|
+| `current-state.md` | update-current-state |
+| `checkpoint.md` | create-checkpoint |
+| `handover.md` | prepare-handover |
+| `resume.md` | resume-with-witness |
+| `subagent-review.md` | review-subagent-artifacts |
+
+### New workspace directory (v6.3)
+
+`.witness/checkpoints/` added to `WITNESS_SUBDIRS`. Checkpoint artifacts created by agent-assisted
+maintenance are stored here.
+
+### v6 data flow
+
+```
+WitnessWorkspaceStatus + observable facts
+    │
+    ▼
+maintenanceTriggerEngine.ts       — computeMaintenanceNeed(): pure, synchronous, 11 rules
+    │
+    ▼
+MaintenanceNeed (kind, title, reason, severity, evidence)
+    │
+    ▼
+artifactMaintenancePromptGenerator.ts  — generateArtifactMaintenancePrompt(): pure, zero imports
+    │
+    ▼
+ArtifactMaintenancePrompt (prompt text, allowedWrites, forbiddenWrites, requiredSections)
+    │
+    ▼ (developer copies/pastes the prompt)
+    │
+Active coding agent               — drafts .witness/ artifact updates only
+    │
+    ▼ (developer runs Validate Artifact Maintenance)
+    │
+artifactMaintenanceValidator.ts   — validateArtifactMaintenance(): pure, synchronous, 5 rules
+    │
+    ▼
+ArtifactMaintenanceValidationResult (status, issues, summary)
+    │
+    ▼
+Developer review                  — approves, corrects, or rejects
+```
+
+### What the v6 layer does not do
+
+- Does not call any LLM or provider API.
+- Does not manage API keys or provider credentials.
+- Does not inject prompts into coding agents automatically.
+- Does not write `.witness/` artifacts on behalf of the developer.
+- Does not approve artifact changes automatically.
+- Does not capture raw LLM output, chat transcripts, or hidden reasoning.
+- Does not modify application source code.
+
+### v6 extension source additions
+
+```
+src/
+├── commands/
+│   ├── updateProjectMemoryWithAgent.ts    — witness.updateProjectMemoryWithAgent (v6.4)
+│   └── validateArtifactMaintenance.ts     — witness.validateArtifactMaintenance (v6.5)
+└── core/
+    ├── maintenanceTriggerEngine.ts        — pure trigger engine (v6.1)
+    ├── artifactMaintenancePromptGenerator.ts — pure prompt generator (v6.2)
+    └── artifactMaintenanceValidator.ts    — pure validator (v6.5)
+
+src/templates/harness/  (additions)
+    ├── current-state.md                   — harness contract (v6.3)
+    ├── checkpoint.md                      — harness contract (v6.3)
+    ├── handover.md                        — harness contract (v6.3)
+    ├── resume.md                          — harness contract (v6.3)
+    └── subagent-review.md                 — harness contract (v6.3)
+
+.witness/  (runtime additions)
+    ├── checkpoints/                       — checkpoint artifacts (v6.3)
+    └── harness/  (additions)
+        ├── current-state.md
+        ├── checkpoint.md
+        ├── handover.md
+        ├── resume.md
+        └── subagent-review.md
+```
+
+Current counts: 29 public commands, 30 activation events, 1 internal status bar command
+(`witness.openStatusActions`, not in `package.json` contributes). 0 runtime dependencies.

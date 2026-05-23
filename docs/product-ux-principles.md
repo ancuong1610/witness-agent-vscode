@@ -1,6 +1,6 @@
 # Witness Agent — Product UX Principles
 
-**Locked as of**: v4 (2026-05-18)
+**Locked as of**: v6 (2026-05-23)
 **Applies to**: v3/v4 Background Continuity Layer and all future phases
 
 ---
@@ -135,6 +135,39 @@ directory paths are never surfaced to the developer.
 
 ---
 
+## v6 UX Principles
+
+These principles were established during the v6 implementation (2026-05-23) and extend the core
+principle above.
+
+**Agent assistance must reduce maintenance work without reducing developer control.**
+
+v6 introduces the first mechanism by which an active coding agent can draft `.witness/` artifact
+content. The design constraint is that this assistance must not shift final authority from the
+developer to the agent. The following sub-principles enforce that constraint.
+
+**Prompts are explicit and copy-ready.**
+The maintenance prompt is shown to the developer in full before any agent receives it. The
+developer decides when and whether to use it. No silent injection occurs.
+
+**Artifact-only mode is required for maintenance tasks.**
+Every v6 maintenance prompt explicitly lists allowed write targets (`.witness/` files only) and
+explicitly forbids modifying application source code, claiming tests passed without evidence,
+and auto-approving changes. The coding agent may not enlarge its own scope.
+
+**Validation is deterministic first.**
+`validateArtifactMaintenance` is a pure synchronous function. It does not call an LLM to
+evaluate artifact quality. Structural checks (file boundary, required sections, placeholder
+markers) are evaluated deterministically. Semantic quality review remains the developer's
+responsibility.
+
+**Developer approval remains final.**
+A validation result of `passed` is a structural finding, not a quality approval. The developer
+reviews the validation report and the artifact content before accepting changes into the
+repository. Witness does not merge, commit, or approve on the developer's behalf.
+
+---
+
 ## Implemented Features
 
 The following item was previously listed as a candidate. It is now implemented in v4.
@@ -176,6 +209,27 @@ orchestration pattern that reads project files and follows markdown instructions
 It is not a Superpowers, Copilot, or Codex API integration. It does not automatically launch,
 retry, or review subagents. Coding agents can use it when the developer loads or references it.
 
+### Agent-Assisted Artifact Maintenance (v6 — implemented)
+
+v6 introduces agent-assisted artifact maintenance. Witness detects when `.witness/` artifacts
+need maintenance, generates a strict copy-ready prompt, and validates the agent-produced changes.
+
+**Core boundary**: LLM may draft. Witness validates. Developer approves.
+
+Two new commands:
+- `Witness: Update Project Memory with Agent` — generates a strict maintenance prompt for the
+  developer's active coding agent. Opens in an unsaved markdown tab. Does not call any LLM.
+  Does not write `.witness/` directly.
+- `Witness: Validate Artifact Maintenance` — validates that the agent's changes stayed inside
+  `.witness/` and produced the required artifact structure. Opens a validation report for developer
+  review.
+
+Five new harness contracts under `.witness/harness/` define the allowed writes, forbidden actions,
+and required output sections for each maintenance kind.
+
+What v6 does not do: call any LLM directly, manage API keys, inject prompts automatically,
+modify source code, or approve artifacts without developer review.
+
 ---
 
 ## Document History
@@ -186,3 +240,4 @@ retry, or review subagents. Coding agents can use it when the developer loads or
 | 2026-05-18 | v4 update. Added automatic activation principle. Added v4 UX principles section. Moved resolver from candidate to implemented. |
 | 2026-05-18 | v4.6 update. Added Agent Harness Pack to implemented features. No UX principle changes. |
 | 2026-05-18 | v4.7 update. Added Generic Orchestrator Harness Guide to implemented features. No UX principle changes. |
+| 2026-05-23 | v6 update. Added v6 UX principles section. Added Agent-Assisted Artifact Maintenance to implemented features. Lock date updated to v6. |

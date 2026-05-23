@@ -1,4 +1,4 @@
-# Witness Agent — Developer Workflow Guide (v4)
+# Witness Agent — Developer Workflow Guide (v6)
 
 This document describes the realistic end-to-end workflow for a developer using Witness Agent v4
 alongside a coding agent such as GitHub Copilot or Claude Code.
@@ -295,6 +295,72 @@ hidden model reasoning. Writes to `.witness/evaluation/evaluation-summary-<sessi
 
 ---
 
+## Phase 7: Agent-Assisted Artifact Maintenance (v6)
+
+v6 reduces the manual effort required to keep `.witness/` artifacts current. Instead of writing
+`current-state.md`, checkpoint files, handovers, and subagent reviews by hand, the developer can
+ask their active coding agent to draft the updates using a strict, Witness-generated prompt.
+
+**The boundary**: Witness assists artifact maintenance through prompts and validation. It does
+not become an autonomous LLM agent.
+
+### The v6 Maintenance Loop
+
+1. **Code normally.** The status bar watches `.witness/` artifact ages and session state in the
+   background.
+
+2. **Witness detects a maintenance need.** When artifacts are stale or missing, the status bar
+   may surface `Maintain: <description>` as the recommended action. The developer can also run
+   the command at any time.
+
+3. **Run `Witness: Update Project Memory with Agent`.** Witness computes what maintenance is
+   needed, generates a strict copy-ready prompt, and opens it in an unsaved editor tab. A
+   "Copy Prompt" button appears in the notification.
+
+4. **Paste or transfer the prompt into your active coding agent.** The developer decides when
+   and how to use the prompt. Nothing is injected automatically.
+
+5. **The coding agent drafts `.witness/` updates only.** The prompt restricts the agent to the
+   listed `.witness/` artifact files. It explicitly forbids modifying application source code.
+   It requires the agent to stop and wait for human review after writing.
+
+6. **Run `Witness: Validate Artifact Maintenance`.** Witness collects the changed files (from
+   the git dirty list or manual entry), reads the updated `.witness/` artifacts, and runs the
+   pure validator. The result — passed, warning, or failed — opens in an unsaved markdown report.
+
+7. **The developer reviews and approves or corrects.** If the validator reports critical (non-
+   `.witness/` files changed), reject the changes and investigate. If it reports warnings (missing
+   sections, placeholder markers), correct the artifact before treating the maintenance as done.
+   If it reports passed, accept the changes as normal source-control workflow.
+
+### What Witness does not do in this loop
+
+- Witness does not call any LLM directly.
+- Witness does not manage API keys.
+- Witness does not inject the prompt into the coding agent automatically.
+- Witness does not write `.witness/` artifacts on behalf of the developer.
+- Witness does not approve artifacts automatically.
+- The developer is reviewer and approver at every step.
+
+### Harness Contracts
+
+After running `Witness: Enable for This Project`, five agent-facing contracts are present under
+`.witness/harness/`:
+
+| Contract | Kind |
+|----------|------|
+| `.witness/harness/current-state.md` | Update current state |
+| `.witness/harness/checkpoint.md` | Create checkpoint |
+| `.witness/harness/handover.md` | Prepare handover |
+| `.witness/harness/resume.md` | Resume with Witness |
+| `.witness/harness/subagent-review.md` | Review subagent artifacts |
+
+These contracts define the allowed writes, forbidden actions, required output sections, and
+completion checklist for each maintenance kind. The generated prompt references the appropriate
+contract. The developer may also share these contracts with their coding agent directly.
+
+---
+
 ## Recurring Principle
 
 Store broadly — record sessions, ADRs, subagent evidence, and observations without over-filtering.
@@ -344,3 +410,5 @@ action. Ignore the bar when things are going well. The bar is not a task queue.
 | Guided resume | `Witness: Resume Session` |
 | Session evaluation | `Witness: Generate Evaluation Summary` |
 | Workspace overview | `Witness: Show Workspace Status` |
+| Artifact maintenance (v6) | `Witness: Update Project Memory with Agent` — generate prompt for active coding agent |
+| Artifact validation (v6) | `Witness: Validate Artifact Maintenance` — validate agent-drafted `.witness/` changes |

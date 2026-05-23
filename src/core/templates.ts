@@ -53,13 +53,22 @@ export const AGENTS_ROOT_FILE = 'AGENTS.md';
  *
  * v4.6: agent-resume.md, subagent-task.md, continuity-issue.md, session-switch.md
  * v4.7: orchestrator.md (Generic Orchestrator Harness Guide)
+ * v6.3: current-state.md, checkpoint.md, handover.md, resume.md,
+ *        subagent-review.md (strict artifact-maintenance contracts)
  */
 export const HARNESS_TEMPLATE_FILES = [
+  // v4.6 / v4.7 — agent role and orchestration protocols
   'agent-resume.md',
   'subagent-task.md',
   'continuity-issue.md',
   'session-switch.md',
   'orchestrator.md',
+  // v6.3 — strict artifact-maintenance contracts
+  'current-state.md',
+  'checkpoint.md',
+  'handover.md',
+  'resume.md',
+  'subagent-review.md',
 ] as const;
 
 /**

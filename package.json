@@ -48,7 +48,9 @@
     "onCommand:witness.enableProject",
     "onCommand:witness.startTrackingTask",
     "onCommand:witness.createCheckpoint",
-    "onCommand:witness.resumeWithWitness"
+    "onCommand:witness.resumeWithWitness",
+    "onCommand:witness.updateProjectMemoryWithAgent",
+    "onCommand:witness.validateArtifactMaintenance"
   ],
   "contributes": {
     "commands": [
@@ -185,6 +187,16 @@
       {
         "command": "witness.resumeWithWitness",
         "title": "Resume with Witness",
+        "category": "Witness"
+      },
+      {
+        "command": "witness.updateProjectMemoryWithAgent",
+        "title": "Update Project Memory with Agent",
+        "category": "Witness"
+      },
+      {
+        "command": "witness.validateArtifactMaintenance",
+        "title": "Validate Artifact Maintenance",
         "category": "Witness"
       }
     ]

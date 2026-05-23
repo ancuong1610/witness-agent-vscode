@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// statusBar.ts — Witness status bar assistant (v5.4a).
+// statusBar.ts — Witness status bar assistant (v6.6).
 // ---------------------------------------------------------------------------
 //
 // Displays current continuity state in the VS Code status bar and offers a
@@ -7,9 +7,14 @@
 //
 // v5.4 change: QuickPick is restructured into three sections:
 //   Section 1 — Recommended: one context-aware top action.
-//   Section 2 — Beginner Actions: five beginner-safe commands.
+//   Section 2 — Beginner Actions: seven beginner-safe commands.
 //   Section 3 — Advanced Actions: existing advanced commands.
 // Advanced commands remain available; they are visually separated below.
+//
+// v6.6 change: Recommended item priority updated to surface v6 maintenance
+// needs (C/D) before the legacy continuity resolver (E). Beginner Actions
+// extended with two v6 commands. Tooltip includes one concise maintenance
+// line.
 //
 // Design invariants:
 //   - One status bar item, created in `initializeWitnessStatusBar` and never
@@ -30,6 +35,7 @@ import * as vscode from 'vscode';
 import { getWorkspaceRoot } from './witnessPaths';
 import { computeWorkspaceStatus, WitnessWorkspaceStatus } from './workspaceStatus';
 import { resolveTopIssue } from './continuityResolver';
+import { computeMaintenanceNeed } from './maintenanceTriggerEngine';
 
 // ---------------------------------------------------------------------------
 // Module-level state
@@ -180,6 +186,15 @@ function buildTooltip(
   md.appendMarkdown(`Suggested action: ${status.suggestedAction.label}\n\n`);
   md.appendMarkdown(`Reason:\n${status.suggestedAction.reason}\n\n`);
 
+  // --- v6 maintenance need (one concise line) ---
+  try {
+    const need = computeMaintenanceNeed({ status });
+    const maintenanceText = need.kind !== 'none' ? need.title : 'up to date';
+    md.appendMarkdown(`Maintenance: ${maintenanceText}\n\n`);
+  } catch {
+    // Non-fatal — omit the maintenance line rather than breaking the tooltip.
+  }
+
   // --- Artifact ages ---
   md.appendMarkdown(
     `Current state: ${formatExistsAge(status.currentStateExists, status.currentStateAgeMinutes)}\n`
@@ -270,20 +285,22 @@ interface StatusQuickPickItem extends vscode.QuickPickItem {
  * Determines and builds the single "Recommended" QuickPick item for the
  * current workspace state.
  *
- * Selection priority (v5.4 spec):
- *   1. `status === null`                        → Show Workspace Status
- *   2. `status.activeSessionId === null`        → Start Tracking This Task
- *   3. `suggestedAction.id !== 'all-clear'`     → Resolve: <label>
+ * Selection priority (v6.6 spec):
+ *   A. `status === null`                        → Show Workspace Status
+ *   B. `status.activeSessionId === null`        → Start Tracking This Task
+ *   C/D. computeMaintenanceNeed → kind !== none → Maintain: <title>
+ *      (witness.updateProjectMemoryWithAgent)
+ *   E. `suggestedAction.id !== 'all-clear'`     → Resolve: <label>
  *      Description: resolver plan `whatHappened`, fallback to `reason`.
- *   4. All-clear with active session            → Create Checkpoint
+ *   F. All-clear with active session            → Create Checkpoint
  *
- * Wraps `resolveTopIssue` in try/catch — a resolver failure never breaks
- * the status bar QuickPick.
+ * Wraps `resolveTopIssue` and `computeMaintenanceNeed` in try/catch —
+ * failures in either are non-fatal and fall through to the next case.
  */
 function buildRecommendedItem(
   status: WitnessWorkspaceStatus | null
 ): StatusQuickPickItem {
-  // Case 1: no status available.
+  // A. No status available.
   if (status === null) {
     return {
       label: 'Witness: Show Workspace Status',
@@ -292,7 +309,7 @@ function buildRecommendedItem(
     };
   }
 
-  // Case 2: no active session — prompt to start one.
+  // B. No active session — prompt to start one.
   if (status.activeSessionId === null) {
     return {
       label: 'Start Tracking This Task',
@@ -301,7 +318,21 @@ function buildRecommendedItem(
     };
   }
 
-  // Case 3: non-all-clear issue — offer the resolver.
+  // C/D. v6 maintenance need — surfaces artifact maintenance before legacy resolver.
+  try {
+    const need = computeMaintenanceNeed({ status });
+    if (need.kind !== 'none') {
+      return {
+        label: `Maintain: ${need.title}`,
+        description: need.reason,
+        commandId: 'witness.updateProjectMemoryWithAgent',
+      };
+    }
+  } catch {
+    // computeMaintenanceNeed failure is non-fatal — fall through to E.
+  }
+
+  // E. Non-all-clear issue — offer the resolver.
   if (status.suggestedAction.id !== 'all-clear') {
     let description = status.suggestedAction.reason;
     try {
@@ -319,7 +350,7 @@ function buildRecommendedItem(
     };
   }
 
-  // Case 4: all-clear with active session — checkpoint is the safe next step.
+  // F. All-clear with active session — checkpoint is the safe next step.
   return {
     label: 'Create Checkpoint',
     description: 'Save progress so a future AI session can resume safely.',
@@ -332,13 +363,13 @@ function buildRecommendedItem(
 // ---------------------------------------------------------------------------
 
 /**
- * Builds the beginner-first QuickPick item list for the status bar (v5.4).
+ * Builds the beginner-first QuickPick item list for the status bar (v6.6).
  *
  * Structure:
  *   Separator — "Recommended"
- *     One context-aware top action.
+ *     One context-aware top action (A–F priority per v6.6 spec).
  *   Separator — "Beginner Actions"
- *     Five beginner-safe commands, deduplicated against recommended.
+ *     Seven beginner-safe commands, deduplicated against recommended.
  *   Separator — "Advanced Actions"
  *     Existing advanced commands, deduplicated against recommended and beginner.
  *
@@ -352,7 +383,7 @@ function buildQuickPickItems(
   const recommendedId = recommended.commandId;
 
   // --- Section 2: Beginner Actions ---
-  // Five beginner-safe commands, deduplicated against the recommended item.
+  // Seven beginner-safe commands, deduplicated against the recommended item.
   const beginnerCandidates: StatusQuickPickItem[] = [
     {
       label: 'Witness: Start Tracking This Task',
@@ -373,6 +404,16 @@ function buildQuickPickItems(
       label: 'Witness: Resolve Continuity Issue',
       description: 'Explain and resolve the current top Witness issue.',
       commandId: 'witness.resolveContinuityIssue',
+    },
+    {
+      label: 'Witness: Update Project Memory with Agent',
+      description: 'Generate a prompt for your coding agent to update project memory.',
+      commandId: 'witness.updateProjectMemoryWithAgent',
+    },
+    {
+      label: 'Witness: Validate Artifact Maintenance',
+      description: 'Validate that artifact-only maintenance stayed inside .witness/',
+      commandId: 'witness.validateArtifactMaintenance',
     },
     {
       label: 'Witness: Show Workspace Status',
