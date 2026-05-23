@@ -5,33 +5,20 @@
 Witness Agent is a VS Code extension that helps your existing coding agent remember what matters
 between sessions.
 
-Use Copilot, Claude Code, Codex, Superpowers, or another coding agent as usual. Witness runs beside
-that tool inside VS Code and keeps a repo-local `.witness/` folder with project memory, checkpoints,
-handover notes, and resume prompts.
-
-Witness is not a coding agent. It does not call an LLM, write code for you, or replace your current
-AI coding tool. It helps your coding agent remember the project safely when you decide to load the
-saved context.
-
-If Witness helps your workflow, please consider giving the repository a star so other developers
-can find it.
-
----
-
-## The Problem
-
 AI coding sessions are ephemeral. When a session ends, the model loses all working memory: what was
 decided, which files were mid-edit, what subagents were dispatched, and why certain constraints
 exist. Decisions, context, delegated work, and handovers can be silently lost at every session
 boundary.
 
-Witness addresses this by externalizing continuity into `.witness/`: a repo-local directory of
-structured artifacts that a fresh coding-agent session can load selectively to resume safely.
+Witness addresses this by externalizing continuity into `.witness/`: a local structured artifacts that a fresh coding-agent session can load selectively to resume safely.
 
 You keep coding normally with Copilot, Claude Code, Codex, Superpowers, or another coding agent.
 Witness runs in the background and helps your coding agent remember the project safely.
 
 **Witness is not your coding agent. It helps your coding agent remember the project safely.**
+
+If Witness helps your workflow, please consider giving the repository a star so other developers
+can find it.
 
 ---
 
@@ -39,7 +26,7 @@ Witness runs in the background and helps your coding agent remember the project 
 
 Witness sits between your project and your coding agent.
 
-<img width="6151" height="1543" alt="mermaid-diagram" src="https://github.com/user-attachments/assets/d173a1d0-4859-4230-8296-8ef6649414a7" />
+<img width="6190" height="1973" alt="mermaid-diagram (1)" src="https://github.com/user-attachments/assets/ca44f06f-adae-453c-a048-8628f88be448" />
 
 
 The boundary is simple:
