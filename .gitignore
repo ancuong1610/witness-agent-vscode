@@ -1,5 +1,6 @@
 out/
 node_modules/
 *.vsix
+!witness-agent-*.vsix
 .vscode-test/
 .DS_Store
