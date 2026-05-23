@@ -27,7 +27,7 @@ can find it.
 
 Witness sits between your project and your coding agent.
 
-<img width="6190" height="1973" alt="mermaid-diagram (1)" src="https://github.com/user-attachments/assets/ca44f06f-adae-453c-a048-8628f88be448" />
+<img width="6190" height="1973" alt="Witness workflow diagram" src="https://github.com/user-attachments/assets/ca44f06f-adae-453c-a048-8628f88be448" />
 
 The boundary is simple:
 
@@ -37,6 +37,33 @@ The boundary is simple:
 - You decide what context to paste into the coding agent and when.
 
 No automatic prompt injection happens. No hidden AI provider call happens.
+
+---
+
+## Prompt-Based Agent Integration
+
+Witness works with coding agents through copy-ready prompts.
+
+It does not call an LLM directly, manage API keys, or inject context into another tool. Instead,
+Witness opens prompt text in VS Code. You review it, then paste it into Copilot, Claude Code,
+Codex, Superpowers, Cursor, or another coding agent.
+
+Commands that generate prompts include:
+
+| Command | Prompt purpose |
+|---------|----------------|
+| `Witness: Start Tracking This Task` | Tell the coding agent what task is being tracked and which Witness files to read |
+| `Witness: Resume with Witness` | Help a fresh coding-agent session load the right project memory |
+| `Witness: Update Project Memory with Agent` | Ask the coding agent to draft updates to allowed `.witness/` artifacts only |
+
+The boundary stays clear:
+
+```text
+Witness generates the prompt -> You review and paste it -> Your coding agent acts
+```
+
+For maintenance workflows, run `Witness: Validate Artifact Maintenance` after the coding agent
+drafts changes.
 
 ---
 
