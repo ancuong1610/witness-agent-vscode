@@ -20,7 +20,7 @@
 /**
  * Generates the beginner-friendly first-run onboarding markdown page.
  *
- * Covers what Witness does, the next step, the beginner workflow, the
+ * Covers what Witness does, the next step, a visual workflow, the
  * copy-ready prompt behavior, what to ignore for now, a short command list,
  * and pointers to advanced docs. Intentionally short — no full methodology.
  *
@@ -45,9 +45,11 @@ project safely.
 
 ## Next Step
 
-**Run: Witness: Start Tracking This Task**
+**Run: Witness: Start with Witness**
 
-This starts a repo-local Witness work record for what you are about to do.
+This starts the shortest beginner path: Witness is initialized if needed, a
+repo-local work record is created, and a copy-ready prompt opens for your
+coding agent.
 
 - It is not the same as starting a new Copilot/Claude/Codex chat.
 - You only need to answer one question: "What are you working on?"
@@ -56,24 +58,62 @@ This starts a repo-local Witness work record for what you are about to do.
 
 ---
 
+## Visual Workflow
+
+\`\`\`text
+Open project
+  |
+  v
+Start with Witness
+  |
+  v
+Answer: "What are you working on?"
+  |
+  v
+Paste prompt into coding agent
+  |
+  v
+Code normally
+  |
+  v
+Witness warns only when action is needed
+  |
+  v
+Click status bar for recommended action
+  |
+  v
+Create Checkpoint before stopping
+  |
+  v
+Resume with Witness next time
+\`\`\`
+
+---
+
 ## Beginner Workflow
 
-1. Enable Witness. (Done.)
-2. Run **Start Tracking This Task** and describe your goal.
+1. Run **Start with Witness** and describe your goal.
+2. Paste the generated prompt into your coding agent.
 3. Code normally with your coding agent.
 4. If the status bar warns you, click it and choose **Resolve Continuity Issue**.
-5. Before stopping for the day, run **Create Checkpoint** or **Prepare Session Switch**.
+5. Before stopping for the day, run **Create Checkpoint**.
 6. Next time, run **Resume with Witness** to get a prompt that reloads project context.
 
 ---
 
 ## Copy-Ready Prompt
 
-After you run **Start Tracking This Task**, Witness opens a short prompt in a
+After you run **Start with Witness**, Witness opens a short prompt in a
 new tab. Paste that prompt into your coding agent at the start of your session.
 The prompt tells the agent which Witness files to read before doing any work.
 
 You do not need to write this prompt yourself. Witness generates it for you.
+
+The initial \`current-state.md\` and session file may still contain template
+guidance after starting. After meaningful work, use **Witness: Update Project
+Memory with Agent** or ask your coding agent to update \`.witness/current-state.md\`
+and the active session file with completed work, validation results, and the
+next safe step.
 
 ---
 
@@ -96,6 +136,8 @@ These are available when you need them. Start simple.
 
 Open the Command Palette (\`Cmd+Shift+P\` / \`Ctrl+Shift+P\`) and type \`Witness\`:
 
+- **Witness: Start with Witness** — initialize if needed and open the start prompt
+- **Witness: Start New Task** — safely switch tasks without deleting session files
 - **Witness: Start Tracking This Task** — begin a work record for your current goal
 - **Witness: Create Checkpoint** — save a continuity snapshot before stopping
 - **Witness: Resume with Witness** — generate a resume prompt for your next session

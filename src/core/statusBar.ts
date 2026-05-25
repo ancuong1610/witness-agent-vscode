@@ -5,14 +5,15 @@
 // Displays current continuity state in the VS Code status bar and offers a
 // beginner-first QuickPick of actions when the item is clicked.
 //
-// v5.4 change: QuickPick is restructured into three sections:
+// v5.4 change: QuickPick is restructured into three sections.
+// v7.4 wording: keep behavior unchanged, but use softer section names:
 //   Section 1 — Recommended: one context-aware top action.
-//   Section 2 — Beginner Actions: seven beginner-safe commands.
-//   Section 3 — Advanced Actions: existing advanced commands.
-// Advanced commands remain available; they are visually separated below.
+//   Section 2 — Main Actions: seven beginner-safe commands.
+//   Section 3 — More Actions: existing advanced commands.
+// More actions remain available; they are visually separated below.
 //
 // v6.6 change: Recommended item priority updated to surface v6 maintenance
-// needs (C/D) before the legacy continuity resolver (E). Beginner Actions
+// needs (C/D) before the legacy continuity resolver (E). Main Actions
 // extended with two v6 commands. Tooltip includes one concise maintenance
 // line.
 //
@@ -368,10 +369,10 @@ function buildRecommendedItem(
  * Structure:
  *   Separator — "Recommended"
  *     One context-aware top action (A–F priority per v6.6 spec).
- *   Separator — "Beginner Actions"
+ *   Separator — "Main Actions"
  *     Seven beginner-safe commands, deduplicated against recommended.
- *   Separator — "Advanced Actions"
- *     Existing advanced commands, deduplicated against recommended and beginner.
+ *   Separator — "More Actions"
+ *     Existing advanced commands, deduplicated against recommended and main.
  *
  * Separator items use `vscode.QuickPickItemKind.Separator` and have no
  * `commandId`. The handler guards for this before calling `executeCommand`.
@@ -382,7 +383,7 @@ function buildQuickPickItems(
   const recommended = buildRecommendedItem(status);
   const recommendedId = recommended.commandId;
 
-  // --- Section 2: Beginner Actions ---
+  // --- Section 2: Main Actions ---
   // Seven beginner-safe commands, deduplicated against the recommended item.
   const beginnerCandidates: StatusQuickPickItem[] = [
     {
@@ -425,8 +426,8 @@ function buildQuickPickItems(
     item => item.commandId !== recommendedId
   );
 
-  // --- Section 3: Advanced Actions ---
-  // Deduplicated against recommended and all beginner items shown.
+  // --- Section 3: More Actions ---
+  // Deduplicated against recommended and all main items shown.
   const knownIds = new Set<string | undefined>([
     recommendedId,
     ...beginnerItems.map(i => i.commandId),
@@ -491,9 +492,9 @@ function buildQuickPickItems(
   return [
     separator('Recommended'),
     recommended,
-    separator('Beginner Actions'),
+    separator('Main Actions'),
     ...beginnerItems,
-    separator('Advanced Actions'),
+    separator('More Actions'),
     ...advancedItems,
   ];
 }

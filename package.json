@@ -49,6 +49,8 @@
     "onCommand:witness.resumeSession",
     "onCommand:witness.generateEvaluationSummary",
     "onCommand:witness.resolveContinuityIssue",
+    "onCommand:witness.startWithWitness",
+    "onCommand:witness.startNewTask",
     "onCommand:witness.enableProject",
     "onCommand:witness.startTrackingTask",
     "onCommand:witness.createCheckpoint",
@@ -174,6 +176,16 @@
         "category": "Witness"
       },
       {
+        "command": "witness.startWithWitness",
+        "title": "Start with Witness",
+        "category": "Witness"
+      },
+      {
+        "command": "witness.startNewTask",
+        "title": "Start New Task",
+        "category": "Witness"
+      },
+      {
         "command": "witness.enableProject",
         "title": "Enable for This Project",
         "category": "Witness"
@@ -202,6 +214,75 @@
         "command": "witness.validateArtifactMaintenance",
         "title": "Validate Artifact Maintenance",
         "category": "Witness"
+      }
+    ],
+    "walkthroughs": [
+      {
+        "id": "witness-ai-coding-continuity",
+        "title": "Witness: AI Coding Continuity",
+        "description": "Start using Witness to keep project memory for AI-assisted coding workflows.",
+        "steps": [
+          {
+            "id": "start-with-witness",
+            "title": "Start with Witness",
+            "description": "Initialize Witness if needed, start tracking your current task, and generate a copy-ready prompt for your coding agent.\n[Start with Witness](command:witness.startWithWitness)",
+            "media": {
+              "markdown": "media/walkthrough/start-with-witness.md"
+            },
+            "completionEvents": [
+              "onCommand:witness.startWithWitness"
+            ]
+          },
+          {
+            "id": "paste-prompt",
+            "title": "Paste the Prompt into Your Coding Agent",
+            "description": "Use the generated prompt with Copilot, Claude Code, Codex, Superpowers, or another coding agent. Witness does not inject context automatically.",
+            "media": {
+              "markdown": "media/walkthrough/paste-prompt.md"
+            }
+          },
+          {
+            "id": "code-normally",
+            "title": "Code Normally",
+            "description": "Keep using your coding agent as usual. Witness watches project-memory continuity in the background.",
+            "media": {
+              "markdown": "media/walkthrough/code-normally.md"
+            }
+          },
+          {
+            "id": "status-bar",
+            "title": "Use the Witness Status Bar",
+            "description": "Hover for status details. Click for the recommended action when Witness shows a warning.\n[Show Workspace Status](command:witness.showWorkspaceStatus)",
+            "media": {
+              "markdown": "media/walkthrough/status-bar.md"
+            },
+            "completionEvents": [
+              "onCommand:witness.showWorkspaceStatus"
+            ]
+          },
+          {
+            "id": "create-checkpoint",
+            "title": "Create Checkpoint",
+            "description": "Save enough project memory so a later AI session can resume safely.\n[Create Checkpoint](command:witness.createCheckpoint)",
+            "media": {
+              "markdown": "media/walkthrough/create-checkpoint.md"
+            },
+            "completionEvents": [
+              "onCommand:witness.createCheckpoint"
+            ]
+          },
+          {
+            "id": "resume-with-witness",
+            "title": "Resume with Witness",
+            "description": "Generate a copy-ready resume prompt for a fresh coding-agent session.\n[Resume with Witness](command:witness.resumeWithWitness)",
+            "media": {
+              "markdown": "media/walkthrough/resume-with-witness.md"
+            },
+            "completionEvents": [
+              "onCommand:witness.resumeWithWitness"
+            ]
+          }
+        ]
       }
     ]
   },

@@ -15,6 +15,7 @@ import {
 import { formatLocalTimestamp } from '../core/time';
 import { presentPrompt } from '../core/promptPresenter';
 import { generateStartTaskPrompt } from '../core/agentPromptGenerator';
+import { refreshWitnessStatusBar } from '../core/statusBar';
 
 // ---------------------------------------------------------------------------
 // Generic-goal detection
@@ -44,7 +45,7 @@ const GENERIC_GOAL_TERMS = new Set([
  *
  * @param goal - The raw task goal string entered by the user (not yet trimmed).
  */
-function isVagueGoal(goal: string): boolean {
+export function isVagueGoal(goal: string): boolean {
   const trimmed = goal.trim();
   if (trimmed.length < 10) {
     return true;
@@ -73,6 +74,124 @@ function replaceFirst(content: string, placeholder: string, value: string): stri
     return content;
   }
   return content.slice(0, index) + value + content.slice(index + placeholder.length);
+}
+
+// ---------------------------------------------------------------------------
+// Shared beginner tracking helpers
+// ---------------------------------------------------------------------------
+
+export interface TaskGoalPromptResult {
+  taskGoal: string | null;
+  usedGenericGoalWarning: boolean;
+}
+
+export interface TrackingSessionResult {
+  sessionId: string;
+  sessionFileUri: vscode.Uri;
+}
+
+export interface StartPromptResult {
+  promptOpened: boolean;
+  copiedToClipboard: boolean;
+}
+
+/**
+ * Prompts for a task goal using the beginner validation flow shared by
+ * `Witness: Start Tracking This Task` and `Witness: Start with Witness`.
+ */
+export async function promptForTaskGoal(): Promise<TaskGoalPromptResult> {
+  let usedGenericGoalWarning = false;
+
+  while (true) {
+    const input = await vscode.window.showInputBox({
+      prompt: 'What are you working on?',
+      placeHolder: 'e.g. Implement GitHub OAuth login and update auth tests.',
+      ignoreFocusOut: true,
+    });
+
+    if (input === undefined || input.trim().length === 0) {
+      return { taskGoal: null, usedGenericGoalWarning };
+    }
+
+    if (isVagueGoal(input)) {
+      const choice = await vscode.window.showWarningMessage(
+        'Witness: A bit more detail helps Witness track your work.',
+        { modal: true },
+        'Continue Anyway',
+        'Edit Goal',
+        'Cancel'
+      );
+
+      if (!choice || choice === 'Cancel') {
+        return { taskGoal: null, usedGenericGoalWarning: true };
+      }
+
+      if (choice === 'Edit Goal') {
+        usedGenericGoalWarning = true;
+        continue;
+      }
+
+      return {
+        taskGoal: input.trim(),
+        usedGenericGoalWarning: true,
+      };
+    }
+
+    return {
+      taskGoal: input.trim(),
+      usedGenericGoalWarning,
+    };
+  }
+}
+
+/**
+ * Creates a Witness tracking session using the same template and pointer
+ * update behavior as the original `Witness: Start Tracking This Task` command.
+ */
+export async function createTrackingSession(
+  context: vscode.ExtensionContext,
+  witnessRoot: vscode.Uri,
+  taskGoal: string
+): Promise<TrackingSessionResult> {
+  const newSessionId = await generateNewSessionId(witnessRoot, new Date());
+  const startedAt = formatLocalTimestamp();
+
+  let content = await loadTemplate(context, 'session-template.md');
+  content = replaceAll(content, '{{SESSION_ID}}', newSessionId);
+  content = replaceFirst(content, '{{YYYY-MM-DDTHH:MM:SSZ}}', startedAt);
+  content = replaceAll(content, '{{SESSION_GOAL}}', taskGoal);
+
+  const sessionsDir = vscode.Uri.joinPath(witnessRoot, 'sessions');
+  await ensureDir(sessionsDir);
+  const sessionFileUri = vscode.Uri.joinPath(sessionsDir, `${newSessionId}.md`);
+  const written = await writeFileIfMissing(sessionFileUri, content);
+  if (!written) {
+    throw new Error(`session file already exists: ${sessionFileUri.fsPath}`);
+  }
+
+  const telemetryDir = vscode.Uri.joinPath(witnessRoot, 'telemetry', newSessionId);
+  await ensureDir(telemetryDir);
+  const gitkeepUri = vscode.Uri.joinPath(telemetryDir, '.gitkeep');
+  await vscode.workspace.fs.writeFile(gitkeepUri, new TextEncoder().encode(''));
+
+  await setCurrentSessionId(witnessRoot, newSessionId);
+  await refreshWitnessStatusBar();
+
+  return {
+    sessionId: newSessionId,
+    sessionFileUri,
+  };
+}
+
+/**
+ * Generates and presents the shared start-task coding-agent prompt.
+ */
+export async function openStartPrompt(
+  taskGoal: string,
+  notificationMessage: string
+): Promise<StartPromptResult> {
+  const promptText = generateStartTaskPrompt({ taskGoal });
+  return presentPrompt(promptText, notificationMessage);
 }
 
 // ---------------------------------------------------------------------------
@@ -158,124 +277,36 @@ export async function startTrackingTask(context: vscode.ExtensionContext): Promi
       }
     }
 
-    // 4. Prompt for the task goal, with validation loop.
-    //    The loop allows the user to edit the goal if it is too vague.
-    while (true) {
-      const input = await vscode.window.showInputBox({
-        prompt: 'What are you working on?',
-        placeHolder: 'e.g. Implement GitHub OAuth login and update auth tests.',
-        ignoreFocusOut: true,
+    const goalResult = await promptForTaskGoal();
+    usedGenericGoalWarning = goalResult.usedGenericGoalWarning;
+    if (!goalResult.taskGoal) {
+      await emitWitnessEvent({
+        workspaceRoot,
+        eventName: 'witness.task_tracking.started',
+        commandId: 'witness.startTrackingTask',
+        sessionId: null,
+        status: 'cancelled',
+        durationMs: elapsed(),
+        attributes: {
+          previous_session_id: existingSessionId ?? null,
+          used_generic_goal_warning: usedGenericGoalWarning,
+          prompt_opened: false,
+          copied_to_clipboard: false,
+        },
       });
-
-      // Empty or cancelled — exit silently.
-      if (input === undefined || input.trim().length === 0) {
-        await emitWitnessEvent({
-          workspaceRoot,
-          eventName: 'witness.task_tracking.started',
-          commandId: 'witness.startTrackingTask',
-          sessionId: null,
-          status: 'cancelled',
-          durationMs: elapsed(),
-          attributes: {
-            previous_session_id: existingSessionId ?? null,
-            used_generic_goal_warning: false,
-            prompt_opened: false,
-            copied_to_clipboard: false,
-          },
-        });
-        return;
-      }
-
-      // Vague goal — offer the user a choice.
-      if (isVagueGoal(input)) {
-        const choice = await vscode.window.showWarningMessage(
-          'Witness: A bit more detail helps Witness track your work.',
-          { modal: true },
-          'Continue Anyway',
-          'Edit Goal',
-          'Cancel'
-        );
-
-        if (!choice || choice === 'Cancel') {
-          await emitWitnessEvent({
-            workspaceRoot,
-            eventName: 'witness.task_tracking.started',
-            commandId: 'witness.startTrackingTask',
-            sessionId: null,
-            status: 'cancelled',
-            durationMs: elapsed(),
-            attributes: {
-              previous_session_id: existingSessionId ?? null,
-              used_generic_goal_warning: true,
-              prompt_opened: false,
-              copied_to_clipboard: false,
-            },
-          });
-          return;
-        }
-
-        if (choice === 'Edit Goal') {
-          // Loop back to the input prompt.
-          usedGenericGoalWarning = true;
-          continue;
-        }
-
-        // 'Continue Anyway' — accept the vague goal.
-        usedGenericGoalWarning = true;
-        taskGoal = input.trim();
-        break;
-      }
-
-      // Valid goal — accept it.
-      taskGoal = input.trim();
-      break;
-    }
-
-    // 5. Generate a new session ID based on the local date.
-    const newSessionId = await generateNewSessionId(witnessRoot, new Date());
-    sessionId = newSessionId;
-
-    // 6. Build the started-at local timestamp.
-    const startedAt = formatLocalTimestamp();
-
-    // 7. Load and populate the session template.
-    //    Placeholder substitution mirrors witness.startSession exactly so that
-    //    sessions created by this command are identical in format.
-    let content = await loadTemplate(context, 'session-template.md');
-    content = replaceAll(content, '{{SESSION_ID}}', newSessionId);
-    content = replaceFirst(content, '{{YYYY-MM-DDTHH:MM:SSZ}}', startedAt);
-    content = replaceAll(content, '{{SESSION_GOAL}}', taskGoal);
-
-    // 8. Write the session file.
-    const sessionsDir = vscode.Uri.joinPath(witnessRoot, 'sessions');
-    await ensureDir(sessionsDir);
-    const sessionFileUri = vscode.Uri.joinPath(sessionsDir, `${newSessionId}.md`);
-    const written = await writeFileIfMissing(sessionFileUri, content);
-    if (!written) {
-      vscode.window.showErrorMessage(
-        `Witness: Start Tracking failed — session file already exists: ${sessionFileUri.fsPath}`
-      );
       return;
     }
+    taskGoal = goalResult.taskGoal;
 
-    // 9. Ensure the telemetry directory for this session exists.
-    const telemetryDir = vscode.Uri.joinPath(witnessRoot, 'telemetry', newSessionId);
-    await ensureDir(telemetryDir);
-    const gitkeepUri = vscode.Uri.joinPath(telemetryDir, '.gitkeep');
-    await vscode.workspace.fs.writeFile(gitkeepUri, new TextEncoder().encode(''));
+    const sessionResult = await createTrackingSession(context, witnessRoot, taskGoal);
+    sessionId = sessionResult.sessionId;
 
-    // 10. Update the .current-session pointer.
-    await setCurrentSessionId(witnessRoot, newSessionId);
-
-    // 11. Build the copy-ready coding-agent prompt.
-    const promptText = generateStartTaskPrompt({ taskGoal });
-
-    // 12 & 13. Open the prompt tab and offer the Copy Prompt notification action.
+    // Open the prompt tab and offer the Copy Prompt notification action.
     //          Delegated to the shared presentPrompt helper so the open-tab +
     //          copy pattern is not duplicated across beginner commands.
-    const presented = await presentPrompt(
-      promptText,
-      `Witness: Tracking "${newSessionId}". Paste the prompt into your coding agent.`
+    const presented = await openStartPrompt(
+      taskGoal,
+      `Witness: Tracking "${sessionId}". Paste the prompt into your coding agent.`
     );
     promptOpened = presented.promptOpened;
     copiedToClipboard = presented.copiedToClipboard;
@@ -286,8 +317,8 @@ export async function startTrackingTask(context: vscode.ExtensionContext): Promi
       workspaceRoot,
       eventName: 'witness.task_tracking.started',
       commandId: 'witness.startTrackingTask',
-      sessionId: newSessionId,
-      artifactPaths: [toRelativeWitnessPath(workspaceRoot, sessionFileUri)],
+      sessionId,
+      artifactPaths: [toRelativeWitnessPath(workspaceRoot, sessionResult.sessionFileUri)],
       status: 'success',
       durationMs: elapsed(),
       attributes: {

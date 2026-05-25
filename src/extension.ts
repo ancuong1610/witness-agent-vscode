@@ -2,6 +2,8 @@ import * as vscode from 'vscode';
 import { initProject } from './commands/initProject';
 import { enableProject } from './commands/enableProject';
 import { startSession } from './commands/startSession';
+import { startWithWitness } from './commands/startWithWitness';
+import { startNewTask } from './commands/startNewTask';
 import { startTrackingTask } from './commands/startTrackingTask';
 import { createCheckpoint } from './commands/createCheckpoint';
 import { resumeWithWitness } from './commands/resumeWithWitness';
@@ -208,10 +210,10 @@ export function activate(context: vscode.ExtensionContext): void {
   // -------------------------------------------------------------------------
   // v5.1a — Beginner Command Layer.
   // -------------------------------------------------------------------------
-  // These four commands wrap existing session and init logic with plain-language
+  // These commands wrap existing session and init logic with plain-language
   // names and beginner-friendly messages. They do not change any existing
   // advanced command behavior.
-  // Public command count: 23 → 25 (v5.1a adds enableProject + startTrackingTask).
+  // v7.1 adds Start with Witness as the compressed first-use entry point.
   // -------------------------------------------------------------------------
 
   const enableProjectCmd = vscode.commands.registerCommand(
@@ -225,6 +227,18 @@ export function activate(context: vscode.ExtensionContext): void {
     () => startTrackingTask(context)
   );
   context.subscriptions.push(startTrackingTaskCmd);
+
+  const startWithWitnessCmd = vscode.commands.registerCommand(
+    'witness.startWithWitness',
+    () => startWithWitness(context)
+  );
+  context.subscriptions.push(startWithWitnessCmd);
+
+  const startNewTaskCmd = vscode.commands.registerCommand(
+    'witness.startNewTask',
+    () => startNewTask(context)
+  );
+  context.subscriptions.push(startNewTaskCmd);
 
   const createCheckpointCmd = vscode.commands.registerCommand(
     'witness.createCheckpoint',
@@ -252,7 +266,7 @@ export function activate(context: vscode.ExtensionContext): void {
   );
   context.subscriptions.push(validateArtifactMaintenanceCommand);
 
-  // 29 public commands registered (23 pre-v5 + 2 v5.1a + 2 v5.1b + 1 v6.4 + 1 v6.5).
+  // 31 public commands registered (23 pre-v5 + 2 v5.1a + 2 v5.1b + 1 v6.4 + 1 v6.5 + 1 v7.1 + 1 v7.3).
 
   // -------------------------------------------------------------------------
   // v3.4 — Status Bar Assistant.

@@ -13,6 +13,7 @@ import {
   toRelativeWitnessPath,
 } from '../core/telemetryWriter';
 import { formatLocalTimestamp } from '../core/time';
+import { refreshWitnessStatusBar } from '../core/statusBar';
 
 // ---------------------------------------------------------------------------
 // Substitution helper
@@ -156,6 +157,7 @@ export async function startSession(context: vscode.ExtensionContext): Promise<vo
 
     // 11. Update the .current-session pointer.
     await setCurrentSessionId(witnessRoot, sessionId);
+    await refreshWitnessStatusBar();
 
     // 12. Open the new session file in the editor.
     const doc = await vscode.workspace.openTextDocument(sessionFileUri);

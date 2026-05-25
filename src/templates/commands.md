@@ -14,12 +14,75 @@ Core principle: store broadly, compress carefully, load minimally, validate resu
 
 ## Group 0: Beginner Commands (v5.1)
 
-These four commands are the recommended starting point for new users. They wrap existing Witness
+These commands are the recommended starting point for new users. They wrap existing Witness
 logic with plain-language names and guided messages. Advanced commands (Groups 1–8) remain fully
 available and are unchanged.
 
 A Witness session is a project work record, not a Copilot/Claude/Codex chat session.
 Starting a new Witness session does not require opening a new coding-agent chat.
+
+---
+
+### Witness: Start with Witness
+
+**Command ID**: `witness.startWithWitness`
+
+One-command beginner entry point. Use this when starting with Witness in a project for the first
+time or when you want the shortest path to project-memory value.
+
+Steps:
+1. If `.witness/index.md` is missing, initializes Witness using the same safe write-if-missing
+   project setup logic as the existing initialization commands.
+2. Asks one question: `What are you working on?`
+3. Uses the same vague-goal warning as `Witness: Start Tracking This Task`.
+4. Creates a Witness tracking session.
+5. Opens an unsaved markdown editor tab containing the copy-ready coding-agent prompt.
+6. Shows a `Copy Prompt` action and tells the user to paste the prompt into their coding agent.
+
+Does not open the onboarding page.
+Does not call an LLM.
+Does not inject the prompt into any coding agent automatically.
+Does not overwrite existing `.witness/` files.
+
+Emits telemetry event `witness.start_with_witness.started` with attributes:
+`initialized_project`, `active_session_created`, `goal_length`,
+`used_generic_goal_warning`, `prompt_opened`, `copied_to_clipboard`,
+`completed`, and `cancelled_at`.
+
+---
+
+### Witness: Start New Task
+
+**Command ID**: `witness.startNewTask`
+
+Safe restart flow for switching from the current work block to a new task. Use this instead of
+deleting `.witness/sessions/` files manually.
+
+If Witness is not enabled, the command tells you to run `Witness: Start with Witness` first. It
+does not initialize the project automatically.
+
+If an active session exists, asks:
+`Start a new task and keep the current session archived?`
+
+Options:
+- `Start New Task` — preserve the current session and continue to the new task flow
+- `Open Current Session` — open `.witness/sessions/<active-session-id>.md` without creating a new session
+- `Cancel` — keep tracking the current task
+
+When starting a new task, the command asks `What are you working on?`, uses the same vague-goal
+warning as `Witness: Start Tracking This Task`, optionally asks whether to run `Create Checkpoint`
+first, then creates a new tracking session and opens the copy-ready coding-agent prompt.
+
+Does not delete old session files.
+Does not delete `.witness/` files.
+Does not generate a handover automatically.
+Does not inject the prompt into any coding agent automatically.
+
+Emits telemetry event `witness.task_tracking.restarted` with attributes:
+`had_active_session`, `opened_current_session`, `checkpoint_requested`,
+`checkpoint_command_invoked`, `active_session_created`, `goal_length`,
+`used_generic_goal_warning`, `prompt_opened`, `copied_to_clipboard`,
+`completed`, and `cancelled_at`.
 
 ---
 
