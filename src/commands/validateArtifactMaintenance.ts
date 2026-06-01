@@ -35,6 +35,7 @@ import {
   createCommandTimer,
   emitWitnessEvent,
 } from '../core/telemetryWriter';
+import { refreshWitnessStatusBar } from '../core/statusBar';
 
 // ---------------------------------------------------------------------------
 // Maintenance kind QuickPick items
@@ -523,6 +524,7 @@ export async function validateArtifactMaintenanceCmd(
         cancelled_at: null,
       },
     });
+    await refreshWitnessStatusBar();
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
     await emitWitnessEvent({

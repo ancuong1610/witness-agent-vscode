@@ -19,9 +19,9 @@
 // Design invariants:
 //   - One status bar item, created in `initializeWitnessStatusBar` and never
 //     recreated. Disposed via context.subscriptions.
-//   - Status is recomputed on activation, after `.witness/` file saves
+//   - Status is recomputed on activation, after `.witness/` file changes
 //     (debounced 2000 ms), and after QuickPick command execution.
-//   - No timers other than the save-event debounce.
+//   - No timers other than the artifact-change debounce.
 //   - No continuous scanning.
 //   - Does not throw to extension activation on status computation failure.
 //   - No LLM calls. No automatic command execution.
@@ -31,6 +31,7 @@
 //
 // ---------------------------------------------------------------------------
 
+import * as path from 'path';
 import * as vscode from 'vscode';
 import { getWorkspaceRoot } from './witnessPaths';
 import { computeWorkspaceStatus, WitnessWorkspaceStatus } from './workspaceStatus';
@@ -53,11 +54,14 @@ let statusBarItem: vscode.StatusBarItem | undefined;
  */
 let latestStatus: WitnessWorkspaceStatus | null = null;
 
-/** Timer handle for the `.witness/` save-event debounce. */
+/** Timer handle for the `.witness/` artifact-change debounce. */
 let saveDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 
-/** Debounce interval in milliseconds for `.witness/` file save events. */
+/** Debounce interval in milliseconds for `.witness/` file change events. */
 const SAVE_DEBOUNCE_MS = 2000;
+
+/** Glob for Witness artifact changes made by VS Code or external agents. */
+const WITNESS_ARTIFACT_GLOB = '**/.witness/**';
 
 // ---------------------------------------------------------------------------
 // Internal command ID
@@ -720,6 +724,20 @@ export async function refreshWitnessStatusBar(): Promise<void> {
   statusBarItem.show();
 }
 
+/**
+ * Schedules a single status refresh after a burst of `.witness/` file events.
+ */
+function scheduleDebouncedRefresh(): void {
+  if (saveDebounceTimer !== null) {
+    clearTimeout(saveDebounceTimer);
+  }
+
+  saveDebounceTimer = setTimeout(() => {
+    saveDebounceTimer = null;
+    void refreshWitnessStatusBar();
+  }, SAVE_DEBOUNCE_MS);
+}
+
 // ---------------------------------------------------------------------------
 // QuickPick handler
 // ---------------------------------------------------------------------------
@@ -789,23 +807,31 @@ export function initializeWitnessStatusBar(context: vscode.ExtensionContext): vo
   const saveListener = vscode.workspace.onDidSaveTextDocument(document => {
     // Only refresh when the saved file is inside a .witness/ directory.
     const fsPath = document.uri.fsPath;
-    const separator = require('path').sep as string;
+    const separator = path.sep;
     const witnessSegment = `${separator}.witness${separator}`;
     if (!fsPath.includes(witnessSegment) && !fsPath.includes('/.witness/')) {
       return;
     }
 
-    // Cancel any pending debounce timer.
-    if (saveDebounceTimer !== null) {
-      clearTimeout(saveDebounceTimer);
-    }
-
-    saveDebounceTimer = setTimeout(() => {
-      saveDebounceTimer = null;
-      void refreshWitnessStatusBar();
-    }, SAVE_DEBOUNCE_MS);
+    scheduleDebouncedRefresh();
   });
   context.subscriptions.push(saveListener);
+
+  // Register a filesystem watcher so external coding-agent writes to
+  // `.witness/` refresh the status bar even when VS Code did not save an
+  // open text document.
+  const witnessWatcher = vscode.workspace.createFileSystemWatcher(
+    WITNESS_ARTIFACT_GLOB,
+    false,
+    false,
+    false
+  );
+  context.subscriptions.push(
+    witnessWatcher.onDidChange(scheduleDebouncedRefresh),
+    witnessWatcher.onDidCreate(scheduleDebouncedRefresh),
+    witnessWatcher.onDidDelete(scheduleDebouncedRefresh),
+    witnessWatcher
+  );
 
   // Register a workspace folders change listener so label updates when the
   // user opens or closes a folder without reloading the extension.

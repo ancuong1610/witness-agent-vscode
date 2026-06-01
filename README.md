@@ -159,7 +159,7 @@ run Witness inside that project workspace.
 Download or locate the packaged extension file:
 
 ```text
-witness-agent-0.1.0.vsix
+witness-agent-0.2.0.vsix
 ```
 
 Install it from VS Code by running `Extensions: Install from VSIX...` from the Command Palette and
@@ -168,7 +168,7 @@ selecting the `.vsix` file.
 You can also install it from the command line:
 
 ```bash
-code --install-extension witness-agent-0.1.0.vsix
+code --install-extension witness-agent-0.2.0.vsix
 ```
 
 After installing, run `Witness: Start` in the project workspace you want Witness to assist.
