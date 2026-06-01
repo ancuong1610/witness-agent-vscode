@@ -30,7 +30,7 @@ export const TEMPLATE_FILES = [
 ] as const;
 
 /**
- * The four top-level documents copied directly into `.witness/` during
+ * The top-level documents copied directly into `.witness/` during
  * initialization.
  */
 export const ROOT_DOC_FILES = [
@@ -38,6 +38,7 @@ export const ROOT_DOC_FILES = [
   'index.md',
   'current-state.md',
   'commands.md',
+  'CHEATSHEET.md',
 ] as const;
 
 /**

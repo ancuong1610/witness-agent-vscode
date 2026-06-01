@@ -12,6 +12,112 @@ Core principle: store broadly, compress carefully, load minimally, validate resu
 
 ---
 
+## Main user workflows
+
+Everyday commands. Normal users can use Witness effectively with only these.
+
+Most users only need Main user workflows and occasionally Maintenance workflows.
+
+| Command | Command ID | Use when |
+|---|---|---|
+| Witness: Start | `witness.start` | You are beginning AI-assisted work. |
+| Witness: Save Progress | `witness.saveProgress` | You are stopping soon or want to preserve progress. |
+| Witness: Resume | `witness.resume` | You are returning in a new coding-agent session. |
+| Witness: Switch Task | `witness.switchTask` | You are moving to another task. |
+| Witness: Fix Issue | `witness.fixIssue` | Witness warns about a continuity issue. |
+| Witness: Status | `witness.status` | You want to know what is happening. |
+| Witness: Cheatsheet | `witness.cheatsheet` | You are lost and need the one-page guide. |
+
+---
+
+## Maintenance workflows
+
+Use these when the coding agent helps update `.witness/` memory artifacts.
+
+| Command | Command ID | Use when |
+|---|---|---|
+| Witness: Update Memory | `witness.updateMemory` | You want your coding agent to update Witness memory. |
+| Witness: Check Memory Update | `witness.checkMemoryUpdate` | Your coding agent changed `.witness/` files. |
+
+---
+
+## Compatibility / manual names
+
+Older or more explicit command names. These still exist for compatibility and for users who prefer
+explicit control. They are not deprecated; they are simply not the first-use surface.
+
+| Command | Command ID | Prefer for most users |
+|---|---|---|
+| Witness: Start with Witness | `witness.startWithWitness` | `Witness: Start` |
+| Witness: Start Tracking This Task | `witness.startTrackingTask` | `Witness: Start` |
+| Witness: Create Checkpoint | `witness.createCheckpoint` | `Witness: Save Progress` |
+| Witness: Resume with Witness | `witness.resumeWithWitness` | `Witness: Resume` |
+| Witness: Start New Task | `witness.startNewTask` | `Witness: Switch Task` |
+| Witness: Resolve Continuity Issue | `witness.resolveContinuityIssue` | `Witness: Fix Issue` |
+| Witness: Show Workspace Status | `witness.showWorkspaceStatus` | `Witness: Status` |
+| Witness: Update Project Memory with Agent | `witness.updateProjectMemoryWithAgent` | `Witness: Update Memory` |
+| Witness: Validate Artifact Maintenance | `witness.validateArtifactMaintenance` | `Witness: Check Memory Update` |
+| Witness: Enable for This Project | `witness.enableProject` | `Witness: Start` |
+
+---
+
+## Advanced / creator tools
+
+Useful for architecture, handover, risk, and explicit context-management work. These commands are
+not required for first use.
+
+| Command | Command ID | Use when |
+|---|---|---|
+| Witness: Create ADR | `witness.createADR` | You need to record an architecture or product decision. |
+| Witness: Create Context Packet | `witness.createContextPacket` | You want one reviewed resume artifact for the next session. |
+| Witness: Generate Handover | `witness.generateHandover` | You are ending meaningful work and need a handoff. |
+| Witness: Prepare Session Switch | `witness.prepareSessionSwitch` | You want the full pre-switch artifact sequence. |
+| Witness: Assess Risk | `witness.assessRisk` | You need an explicit continuity risk assessment. |
+| Witness: Compress State | `witness.compressState` | You need to trim or refresh `current-state.md`. |
+| Witness: Validate Handover | `witness.validateHandover` | You need to check handover quality. |
+| Witness: Create Resume Probe | `witness.createResumeProbe` | You need to test whether a handover is usable. |
+
+---
+
+## Subagent / orchestrator tools
+
+For delegated or orchestrated coding-agent workflows. These are not needed for normal single-agent
+use.
+
+| Command | Command ID | Use when |
+|---|---|---|
+| Witness: Start Subagent Task | `witness.startSubagentTask` | You are dispatching bounded subagent work. |
+| Witness: Create Subagent Context Packet | `witness.createSubagentContextPacket` | You need scoped context for a subagent. |
+| Witness: Record Subagent Evidence | `witness.recordSubagentEvidence` | You need to record what a subagent inspected or changed. |
+| Witness: Complete Subagent Task | `witness.completeSubagentTask` | A subagent has produced a completion report. |
+| Witness: Review Subagent Task | `witness.reviewSubagentTask` | The parent session needs to accept or reject subagent output. |
+| Witness: Record Subagent Report | `witness.recordSubagent` | You only need a lightweight subagent report. |
+
+---
+
+## Debug / evaluation tools
+
+For debugging, evaluation, research, or project-maintainer workflows.
+
+| Command | Command ID | Use when |
+|---|---|---|
+| Witness: Observe Workspace | `witness.observeWorkspace` | You need a deterministic workspace observation. |
+| Witness: Generate Evaluation Summary | `witness.generateEvaluationSummary` | You need a deterministic session evaluation report. |
+| Witness: Record Context Snapshot | `witness.recordContext` | You need a context-pressure snapshot. |
+| Witness: Checkpoint Now | `witness.checkpointNow` | You need the older guided checkpoint workflow. |
+| Witness: Resume Session | `witness.resumeSession` | You need the older context-packet resume workflow. |
+| Witness: Initialize Project | `witness.initProject` | You need the lower-level initialization command. |
+| Witness: Start Session | `witness.startSession` | You need the lower-level session command. |
+
+---
+
+## Detailed command reference
+
+The sections below keep the full command documentation. Advanced commands remain available for
+creator, orchestrator, debug, research, and power-user workflows.
+
+---
+
 ## Group 0: Beginner Commands (v5.1)
 
 These commands are the recommended starting point for new users. They wrap existing Witness
@@ -20,6 +126,54 @@ available and are unchanged.
 
 A Witness session is a project work record, not a Copilot/Claude/Codex chat session.
 Starting a new Witness session does not require opening a new coding-agent chat.
+
+---
+
+## Workflow-First Command Aliases (v8.1)
+
+These beginner-friendly aliases expose the main Witness moments with user-intent names. They do not
+replace or remove the existing commands. Each alias delegates to an existing Witness workflow and
+keeps the original command ID available for docs, tests, and power-user use.
+
+| Beginner alias | Command ID | Delegates to |
+|---|---|---|
+| Witness: Start | `witness.start` | `witness.startWithWitness` |
+| Witness: Status | `witness.status` | `witness.showWorkspaceStatus` |
+| Witness: Save Progress | `witness.saveProgress` | `witness.createCheckpoint` |
+| Witness: Resume | `witness.resume` | `witness.resumeWithWitness` |
+| Witness: Switch Task | `witness.switchTask` | `witness.startNewTask` |
+| Witness: Fix Issue | `witness.fixIssue` | `witness.resolveContinuityIssue` |
+| Witness: Update Memory | `witness.updateMemory` | `witness.updateProjectMemoryWithAgent` |
+| Witness: Check Memory Update | `witness.checkMemoryUpdate` | `witness.validateArtifactMaintenance` |
+
+These aliases do not add new behavior, call an LLM, inject prompts automatically, or change status
+bar behavior.
+
+---
+
+## Cheatsheet / Help (v8.2)
+
+### Witness: Cheatsheet
+
+**Command ID**: `witness.cheatsheet`
+
+Opens the one-page Witness cheatsheet for the current workspace. The cheatsheet answers what to
+click for the main workflow moments: start, switch, save progress, resume, fix warnings, check
+status, and validate memory updates.
+
+Behavior:
+1. If no workspace folder is open, shows:
+   `Witness: Open a workspace folder to view the cheatsheet.`
+2. If `.witness/` is missing, shows:
+   `Witness is not enabled yet. Run "Witness: Start" first.`
+3. If `.witness/CHEATSHEET.md` exists, opens it without overwriting.
+4. If `.witness/` exists but `.witness/CHEATSHEET.md` is missing, restores it from
+   `src/templates/CHEATSHEET.md` using write-if-missing behavior, then opens it.
+
+Does not initialize Witness automatically.
+Does not overwrite user-modified cheatsheets.
+Does not call an LLM.
+Does not inject prompts into any coding agent.
 
 ---
 
@@ -200,10 +354,11 @@ Emits telemetry event `witness.resume_prompt.generated` with attributes:
 
 **Command ID**: `witness.initProject`
 
-Creates the `.witness/` directory structure in the current workspace root. Populates the four
-top-level documents (`constitution.md`, `index.md`, `current-state.md`, `commands.md`) and copies
-all 12 template files into `.witness/templates/`. Creates empty subdirectories with `.gitkeep`
-files for `sessions/`, `telemetry/`, `subagents/`, `decisions/`, `handovers/`, and `evaluation/`.
+Creates the `.witness/` directory structure in the current workspace root. Populates the top-level
+documents (`constitution.md`, `index.md`, `current-state.md`, `commands.md`, `CHEATSHEET.md`) and
+copies all 12 template files into `.witness/templates/`. Creates empty subdirectories with
+`.gitkeep` files for `sessions/`, `telemetry`, `subagents`, `decisions`, `handovers`, and
+`evaluation`.
 
 Safe to run on any workspace. Idempotent — does not overwrite files that already exist.
 

@@ -1,69 +1,148 @@
-<img width="1197" height="759" alt="Witness Agent screenshot" src="https://github.com/user-attachments/assets/9fbe3bf2-a628-4fc6-a009-a0ca9a60e757" />
-
 # Witness Agent
 
-Witness Agent is a VS Code extension that helps your existing coding agent remember what matters
-between sessions.
+Witness helps your AI coding sessions remember what matters.
 
-AI coding sessions are ephemeral. When a session ends, the model loses all working memory: what was
-decided, which files were mid-edit, what subagents were dispatched, and why certain constraints
-exist. Decisions, context, delegated work, and handovers can be silently lost at every session
-boundary.
+Start:
+1. Run `Witness: Start`
+2. Answer what you are working on
+3. Paste the prompt into your coding agent
+4. Code normally
 
-Witness addresses this by externalizing continuity into `.witness/`: a repo-local directory of
-structured artifacts that a fresh coding-agent session can load selectively to resume safely.
+Lost?
+Run `Witness: Cheatsheet`.
 
-You keep coding normally with Copilot, Claude Code, Codex, Superpowers, or another coding agent.
-Witness runs in the background and helps your coding agent remember the project safely.
+Witness Agent is a VS Code extension for AI-assisted coding workflows. It creates a repo-local
+`.witness/` memory layer so Copilot, Claude Code, Codex, Superpowers, Cursor, or another coding
+agent can resume project work with the right context.
 
-**Witness is not your coding agent. It helps your coding agent remember the project safely.**
+AI coding sessions are temporary. Decisions, progress, constraints, and next steps can disappear
+when a session ends. Witness keeps that project memory visible, reviewable, and easy to load into
+the next coding-agent session.
 
-If Witness helps your workflow, please consider giving the repository a star so other developers
-can find it.
+Witness is not your coding agent. It does not call an LLM directly, automatically inject prompts,
+or modify source code automatically. You decide what to paste and when.
 
 ---
 
-## How Witness Fits Your Workflow
+## Quick Start
 
-Witness sits between your project and your coding agent.
+Open the Command Palette with `Cmd+Shift+P` on macOS or `Ctrl+Shift+P` on Windows/Linux.
 
-<img width="6190" height="1973" alt="Witness workflow diagram" src="https://github.com/user-attachments/assets/ca44f06f-adae-453c-a048-8628f88be448" />
+Run:
 
-The boundary is simple:
+```text
+Witness: Start
+```
 
-- You keep coding in your normal coding agent.
-- Witness watches the continuity state through `.witness/`.
-- Witness gives you prompts, checkpoints, status warnings, and validation.
-- You decide what context to paste into the coding agent and when.
+Witness initializes `.witness/` if needed, asks what you are working on, and opens a copy-ready
+prompt. Paste that prompt into your coding agent, then keep coding normally.
 
-No automatic prompt injection happens. No hidden AI provider call happens.
+---
+
+## 5-Minute Workflow
+
+1. `Witness: Start` when beginning AI-assisted work.
+2. Paste the generated prompt into your coding agent.
+3. Code normally.
+4. Click the Witness status bar when it recommends action.
+5. `Witness: Save Progress` before stopping.
+6. `Witness: Switch Task` when moving to another task.
+7. `Witness: Resume` when returning later.
+8. `Witness: Cheatsheet` if you are lost.
+
+---
+
+## Main Commands
+
+Most users should start with these workflow-first names:
+
+| Command | Use when |
+|---|---|
+| `Witness: Start` | starting AI-assisted work |
+| `Witness: Save Progress` | stopping soon |
+| `Witness: Resume` | returning later |
+| `Witness: Switch Task` | moving to another task |
+| `Witness: Fix Issue` | Witness warns about a continuity issue |
+| `Witness: Status` | you want to know what is happening |
+| `Witness: Cheatsheet` | you are lost |
+| `Witness: Update Memory` | you want your coding agent to update Witness memory |
+| `Witness: Check Memory Update` | your coding agent changed `.witness/` files |
+
+---
+
+## Cheatsheet
+
+Witness installs a one-page guide at:
+
+```text
+.witness/CHEATSHEET.md
+```
+
+Open it with:
+
+```text
+Witness: Cheatsheet
+```
+
+The cheatsheet answers: "What should I do now?"
+
+---
+
+## Status Bar
+
+The Witness status bar shows current project-memory state. Hover for details. Click for actions.
+
+The click menu is grouped like this:
+
+| Section | What it contains |
+|---|---|
+| Recommended | the best next action for the current workspace |
+| Main Actions | everyday workflow commands: Start, Save Progress, Resume, Switch Task, Status, Cheatsheet, Fix Issue |
+| Maintenance | Update Memory and Check Memory Update |
+| More Actions | extra, original, and advanced commands |
+
+The tooltip still shows the detailed reason, such as stale project memory, missing handover,
+pending review, or critical continuity risk.
 
 ---
 
 ## Prompt-Based Agent Integration
 
-Witness works with coding agents through copy-ready prompts.
-
-It does not call an LLM directly, manage API keys, or inject context into another tool. Instead,
-Witness opens prompt text in VS Code. You review it, then paste it into Copilot, Claude Code,
-Codex, Superpowers, Cursor, or another coding agent.
-
-Commands that generate prompts include:
-
-| Command | Prompt purpose |
-|---------|----------------|
-| `Witness: Start with Witness` | Initialize if needed, start tracking the task, and tell the coding agent which Witness files to read |
-| `Witness: Resume with Witness` | Help a fresh coding-agent session load the right project memory |
-| `Witness: Update Project Memory with Agent` | Ask the coding agent to draft updates to allowed `.witness/` artifacts only |
-
-The boundary stays clear:
+Witness works through copy-ready prompts.
 
 ```text
 Witness generates the prompt -> You review and paste it -> Your coding agent acts
 ```
 
-For maintenance workflows, run `Witness: Validate Artifact Maintenance` after the coding agent
-drafts changes.
+For maintenance:
+
+1. Run `Witness: Update Memory`.
+2. Paste the prompt into your coding agent.
+3. Let the coding agent update allowed `.witness/` files.
+4. Run `Witness: Check Memory Update`.
+5. Review the result before trusting it.
+
+Witness does not send prompts automatically and does not read hidden model reasoning.
+
+---
+
+## Manual / Advanced command names
+
+These command names still exist for compatibility and advanced workflows. Most users should use
+the shorter v8 names above.
+
+| Manual / advanced name | Prefer |
+|---|---|
+| `Witness: Start with Witness` | `Witness: Start` |
+| `Witness: Start Tracking This Task` | `Witness: Start` |
+| `Witness: Create Checkpoint` | `Witness: Save Progress` |
+| `Witness: Resume with Witness` | `Witness: Resume` |
+| `Witness: Resolve Continuity Issue` | `Witness: Fix Issue` |
+| `Witness: Update Project Memory with Agent` | `Witness: Update Memory` |
+| `Witness: Validate Artifact Maintenance` | `Witness: Check Memory Update` |
+
+Additional advanced commands remain available from the Command Palette under `Witness`, including
+ADR, context packet, handover, subagent, risk, and evaluation commands.
 
 ---
 
@@ -92,167 +171,11 @@ You can also install it from the command line:
 code --install-extension witness-agent-0.1.0.vsix
 ```
 
-After installing, continue with the quick start below in the project workspace you want Witness to
-assist.
-
----
-
-## Quick Start
-
-Use this flow after installing the VSIX, or inside the Extension Development Host if you are running
-Witness from source. Start by opening the project you want Witness to assist.
-
-Open the Command Palette with `Cmd+Shift+P` on macOS or `Ctrl+Shift+P` on Windows/Linux, then run:
-
-```text
-Witness: Start with Witness
-```
-
-Witness initializes `.witness/` if needed, asks one question, creates a tracking session, and opens
-a copy-ready prompt for your coding agent. It does not send the prompt automatically.
-
-VS Code's Welcome / Walkthrough page also includes:
-
-```text
-Witness: AI Coding Continuity
-```
-
-## 5-Minute Workflow
-
-1. Start with Witness.
-2. Answer "What are you working on?"
-3. Paste the prompt into your coding agent.
-4. Code normally.
-5. Click Witness when it recommends action.
-6. Create Checkpoint before stopping.
-7. Resume with Witness next time.
-
-## Tutorial
-
-### Step 1 — Start with Witness
-
-Run:
-
-```text
-Witness: Start with Witness
-```
-
-This command initializes Witness if needed, starts task tracking, and opens a copy-ready
-coding-agent prompt. It does not inject anything automatically.
-
-When Witness asks what you are working on, give it a specific goal, for example:
-
-```text
-Implement login validation and update current-state before stopping.
-```
-
-### Step 2 — Paste The Prompt Into Your Coding Agent
-
-Paste the prompt into Copilot, Claude Code, Codex, Superpowers, or whichever coding agent you use.
-
-The prompt tells the agent which `.witness/` files to read before it starts work. Witness does not
-send the prompt automatically.
-
-### Step 3 — Code Normally
-
-Continue using your coding agent and editor as usual.
-
-Witness stays in the background and updates the VS Code status bar when continuity needs attention.
-
-The first `current-state.md` and session file may still contain template guidance after starting a
-task. Witness creates the tracking session and prompt; the developer or coding agent still updates
-the memory artifacts after meaningful work. Use `Witness: Update Project Memory with Agent`, or ask
-your coding agent to update `.witness/current-state.md` and the active session file with completed
-work, validation results, and the next safe step.
-
-### Step 4 — Follow The Status Bar
-
-The Witness status bar item shows the current continuity state. Click it when it is not
-`Witness: OK`, or when you want a quick list of Witness actions.
-
-### Step 5 — Create A Checkpoint Before Stopping
-
-Before you stop work, switch tasks, or close the coding-agent chat, run:
-
-```text
-Witness: Create Checkpoint
-```
-
-This saves enough project memory for a later session to understand where things stand.
-
-### Step 6 — Start A New Task Safely
-
-When you want to move to a different task, run:
-
-```text
-Witness: Start New Task
-```
-
-This preserves old session files and starts a clean tracked work block. Do not delete
-`.witness/sessions/` manually.
-
-### Step 7 — Resume Later
-
-When you return in a new coding-agent session, run:
-
-```text
-Witness: Resume with Witness
-```
-
-Witness opens a resume prompt. Paste that prompt into your coding agent so it can load the right
-project memory before continuing.
-
----
-
-## Visual Guide
-
-This is the normal loop:
-
-```text
-Start work
-   |
-   v
-Witness: Start with Witness
-   |
-   v
-Paste generated prompt into your coding agent
-   |
-   v
-Code normally
-   |
-   v
-Watch Witness status bar
-   |
-   +--> Witness: OK
-   |       |
-   |       v
-   |    Keep coding
-   |
-   +--> Warning or recommendation
-           |
-           v
-        Click status bar and follow the recommended action
-           |
-           v
-        Create checkpoint, update memory, or resolve issue
-           |
-           v
-        Resume safely later
-```
-
-Think of Witness as a project memory assistant:
-
-```text
-Start with Witness -> Work -> Checkpoint -> Resume
-```
-
----
-
-## Development Setup
-
-Use this path only when developing or testing the extension itself.
+After installing, run `Witness: Start` in the project workspace you want Witness to assist.
 
 ### Run From Source
+
+Use this path only when developing or testing the extension itself.
 
 1. Clone and install:
 
@@ -263,71 +186,20 @@ Use this path only when developing or testing the extension itself.
    ```
 
 2. Open this folder in VS Code.
-
 3. Press `F5` to launch an Extension Development Host window.
-
 4. In the Extension Development Host, open the project you want Witness to assist.
-
-After the Extension Development Host is open, continue with the quick start above.
-
-This local setup is intended for development and early public testing. Marketplace installation
-instructions will replace this section when the extension is published.
-
----
-
-## How The Status Bar Works
-
-The Witness status bar item appears in the bottom VS Code bar. It is informational by default and
-does not run commands on its own.
-
-Witness recomputes the status when:
-
-- the extension activates
-- a `.witness/` file is saved
-- a workspace change affects the observed state
-- you run a Witness command from the status bar QuickPick
-
-The status bar reads `.witness/` artifact metadata such as active session, artifact age, latest
-risk level, subagent health, context packet markers, and telemetry state. It detects observable
-continuity degradation from `.witness/` artifacts. It does not directly detect hidden model context
-rot or true token pressure, and it does not read AI chat transcripts or hidden model reasoning.
-
-| Label | What it means | Recommended response |
-|-------|---------------|----------------------|
-| `Witness: OK` | Active session and artifacts look healthy | Keep working |
-| `Witness: No Session` | Witness is enabled but no task/session is active | Run `Witness: Start with Witness` |
-| `Witness: Checkpoint` | A checkpoint or maintenance step is useful soon | Create a checkpoint or update memory |
-| `Witness: Review Needed` | A warning exists, often stale artifacts or subagent review | Click the status bar and follow the top action |
-| `Witness: Attention` | A critical continuity issue exists | Resolve before continuing |
-| `Witness: No Workspace` | VS Code has no workspace folder open | Open a project folder |
-| `Witness: Status Error` | Status could not be computed | Run `Witness: Show Workspace Status` |
-
-When clicked, the status bar opens a QuickPick with three sections:
-
-| Section | What it contains |
-|---------|------------------|
-| Recommended | One context-aware action, such as `Start with Witness`, `Maintain: <reason>`, `Resolve: <issue>`, or `Create Checkpoint` |
-| Main Actions | The safest everyday commands for new users |
-| More Actions | More specific commands for handovers, subagents, evaluation, and session switches |
-
-The recommended item follows this priority:
-
-1. If no status is available, open workspace status.
-2. If no active session exists, start with Witness or start tracking the task.
-3. If project memory maintenance is needed, generate an agent maintenance prompt.
-4. If a continuity issue exists, open the guided resolver.
-5. If everything is healthy, offer a checkpoint.
+5. Run `Witness: Start`.
 
 ---
 
 ## What Witness Creates
 
-When enabled, Witness creates a `.witness/` directory inside your project. This is the memory layer
-that your future coding-agent sessions can read.
+When enabled, Witness creates a `.witness/` directory inside your project.
 
 ```text
 .witness/
   AGENTS.md
+  CHEATSHEET.md
   commands.md
   constitution.md
   current-state.md
@@ -343,276 +215,66 @@ that your future coding-agent sessions can read.
   templates/
 ```
 
+Key files:
+
 | Path | Purpose |
-|------|---------|
-| `.witness/index.md` | Directory map and reading order |
-| `.witness/current-state.md` | Current project state and important context |
-| `.witness/handovers/latest.md` | Latest validated handover for resume |
-| `.witness/sessions/` | Session records, observations, risk files, context packets, and archived current-state snapshots |
-| `.witness/subagents/` | Subagent task records and ledger entries |
-| `.witness/checkpoints/` | Checkpoint artifacts used by the v6 maintenance flow |
-| `.witness/decisions/` | ADRs for architectural or design decisions |
-| `.witness/evaluation/` | Handover validation reports, resume probes, and session evaluation summaries |
-| `.witness/AGENTS.md` | Entry point for coding agents that need Witness instructions |
-| `.witness/harness/` | Protocol files for resume, tasks, issues, session switches, and maintenance contracts |
-| `.witness/telemetry/` | Local structured event log, not part of the default read set |
-| `.witness/templates/` | Templates used to create Witness artifacts |
+|---|---|
+| `.witness/CHEATSHEET.md` | one-page guide for what to do next |
+| `.witness/index.md` | directory map and reading order |
+| `.witness/current-state.md` | current project state and important context |
+| `.witness/handovers/latest.md` | latest handover for resume |
+| `.witness/sessions/` | session records and related artifacts |
+| `.witness/checkpoints/` | saved progress artifacts |
+| `.witness/AGENTS.md` | entry point for coding agents that need Witness instructions |
+| `.witness/harness/` | protocol files for advanced workflows |
+| `.witness/telemetry/` | local structured event log, not part of the default read set |
 
-### The Logic
-
-Witness follows four rules:
-
-- **Store broadly**: record sessions, observations, ADRs, subagent evidence, and handovers as
-  artifacts instead of relying on chat memory.
-- **Load minimally**: a fresh coding-agent session should not read the entire `.witness/` folder.
-- **Review before reuse**: handovers, context packets, and agent-drafted maintenance should be
-  reviewed before they are trusted.
-- **Keep the developer in control**: Witness suggests and validates; the developer approves.
-
-The default read set for a fresh coding-agent session is:
-
-1. `.witness/index.md`
-2. `.witness/current-state.md`
-3. `.witness/handovers/latest.md`
-
-If a reviewed context packet exists, use it as the main resume artifact:
-
-```text
-.witness/sessions/<session-id>-context-packet-NNN.md
-```
-
-Do not load every `.witness/` file by default. Pull extra files only when the task needs them.
+Do not load every `.witness/` file into a coding agent by default. Start with the prompt Witness
+generates.
 
 ---
 
-## Subagent Ledger Mechanism
+## Safety Boundaries
 
-Witness includes a subagent ledger for workflows where your main coding agent delegates bounded
-tasks to another agent. The ledger exists because subagent work has the same continuity problem as
-normal AI sessions: once the subagent finishes, its working context disappears unless the parent
-session records what happened.
+Witness keeps the developer in control.
 
-The goal is to make subagent output reviewable instead of treating it as an unverified claim.
-
-### When To Use It
-
-Use the ledger when a delegated task is meaningful enough that a future session may need to know:
-
-- what the subagent was asked to do
-- what context the subagent received
-- what evidence the subagent produced
-- whether the parent session accepted or rejected the result
-- what follow-up or integration work remains
-
-For tiny, reversible tasks, a full ledger may be unnecessary. For normal delegated work, use the
-five-stage ledger. For a quick backward-compatible note, use `Witness: Record Subagent Report`.
-
-### The Five Stages
-
-Each full ledger entry lives under:
-
-```text
-.witness/subagents/subagent-NNN/
-```
-
-The five files are created in order:
-
-| Stage | File | Command | Purpose |
-|-------|------|---------|---------|
-| 1 | `contract.md` | `Witness: Start Subagent Task` | Defines the task goal, acceptance criteria, scope, and expected evidence before dispatch |
-| 2 | `context-packet.md` | `Witness: Create Subagent Context Packet` | Records exactly what context the subagent receives |
-| 3 | `evidence.md` | `Witness: Record Subagent Evidence` | Records what the subagent inspected, changed, ran, decided, and verified |
-| 4 | `report.md` | `Witness: Complete Subagent Task` | States completion status against the acceptance criteria |
-| 5 | `review.md` | `Witness: Review Subagent Task` | Records the parent-session review, acceptance decision, and integration actions |
-
-The review is the closing step. Do not treat subagent work as integrated until the ledger has a
-review file.
-
-### How It Reduces Risk
-
-The ledger gives the parent session a chain of evidence:
-
-```text
-Contract -> Context Packet -> Evidence -> Report -> Review
-```
-
-That chain answers the key continuity questions:
-
-- Did the subagent have enough context?
-- Did it stay inside the requested scope?
-- Did it meet the acceptance criteria?
-- What proof exists beyond the final answer?
-- Did the parent session review and accept the result?
-
-Witness uses this structure when computing subagent health for the status bar. Missing evidence,
-missing reports, blocked tasks, failed tasks, and missing reviews can surface as `Witness: Review
-Needed` or another recommended action.
-
-### Lightweight vs Full Tracking
-
-Witness supports two subagent recording styles:
-
-| Style | Use it when | Artifact shape |
-|-------|-------------|----------------|
-| Lightweight report | You only need a short note for a simple delegation | `.witness/subagents/subagent-NNN.md` |
-| Full ledger | You need traceable context, evidence, completion, and review | `.witness/subagents/subagent-NNN/contract.md`, `context-packet.md`, `evidence.md`, `report.md`, `review.md` |
-
-When in doubt, use the full ledger. It is easier to skip unnecessary detail than to reconstruct
-missing evidence after a session boundary.
+- Witness is not your coding agent.
+- Witness does not call an LLM directly.
+- Witness does not manage API keys.
+- Witness does not automatically inject prompts into AI chats.
+- Witness does not modify source code automatically.
+- Witness does not capture raw AI chat transcripts.
+- Witness does not capture hidden model reasoning.
+- Witness suggests and validates; the developer approves.
 
 ---
 
-## Command Guide
+## Advanced Workflows
 
-Open the Command Palette with `Cmd+Shift+P` or `Ctrl+Shift+P`, then type `Witness`.
+Advanced commands remain available for teams and power users:
 
-### Beginner Commands
+- ADRs for decisions
+- handovers for session transfer
+- context packets for reviewed resume artifacts
+- subagent ledger commands for delegated work
+- risk assessment and evaluation summaries for diagnostics
+- harness protocols for agent-maintenance workflows
 
-Use these first. They are the simplest path for most users.
-
-| Command | Use it when | What it does |
-|---------|-------------|--------------|
-| `Witness: Start with Witness` | You are using Witness for the first time, or want the shortest start path | Initializes if needed, starts tracking, and opens a copy-ready prompt |
-| `Witness: Start New Task` | You are switching tasks or want a clean new tracked work block | Preserves old session files and starts a new prompt flow |
-| `Witness: Create Checkpoint` | You are about to stop, switch tasks, or want a saved project-memory point | Observes the workspace and optionally opens `current-state.md` for update |
-| `Witness: Resume with Witness` | You are returning in a fresh coding-agent session | Opens a copy-ready resume prompt with the standard Witness read set |
-| `Witness: Resolve Continuity Issue` | The status bar warns you or you want guided help | Explains the top issue, shows evidence, and offers ranked actions |
-| `Witness: Update Project Memory with Agent` | Witness says maintenance is needed, or artifacts are stale | Generates a strict prompt for your coding agent to draft `.witness/` updates |
-| `Witness: Validate Artifact Maintenance` | A coding agent has drafted `.witness/` changes | Checks that changes stayed inside `.witness/` and required sections exist |
-| `Witness: Show Workspace Status` | You want a readable status report | Opens a deterministic markdown report without writing files |
-
-### Manual / Secondary Beginner Commands
-
-Most new users should start with:
-
-```text
-Witness: Start with Witness
-```
-
-These commands remain available when you want separate control over setup and task tracking:
-
-| Command | Use it when | What it does |
-|---------|-------------|--------------|
-| `Witness: Enable for This Project` | You only want to create `.witness/` without starting a task | Creates `.witness/`, templates, harness files, and opens an onboarding page with information and next steps |
-| `Witness: Start Tracking This Task` | Witness is already enabled and you only want the task-start flow | Creates a session record and opens a copy-ready prompt for your coding agent |
-
-### Project And Session Foundation
-
-| Command | Use it when | What it does |
-|---------|-------------|--------------|
-| `Witness: Initialize Project` | You want the lower-level setup command instead of the beginner wrapper | Creates the `.witness/` structure and starter documents |
-| `Witness: Start Session` | You want the lower-level session command instead of `Start Tracking This Task` | Creates a session file, telemetry folder, and active session pointer |
-
-### Context And Workspace State
-
-| Command | Use it when | What it does |
-|---------|-------------|--------------|
-| `Witness: Observe Workspace` | You want a point-in-time snapshot before handover, checkpoint, or delegation | Records branch, commit, dirty files, and recent commits |
-| `Witness: Record Context Snapshot` | The coding-agent session feels long or context pressure is notable | Records an estimated context-pressure measurement |
-| `Witness: Assess Continuity Risk` | You are near a phase boundary or before handover | Guides five risk dimensions and records the overall level |
-| `Witness: Compress Current State` | `current-state.md` has become too long or stale | Archives the current file and opens the live file for manual trimming |
-
-### Decisions And Handover
-
-| Command | Use it when | What it does |
-|---------|-------------|--------------|
-| `Witness: Create ADR` | You make an architectural or product decision that future sessions must remember | Creates a numbered ADR under `.witness/decisions/` |
-| `Witness: Generate Handover` | You are ending meaningful work | Creates a dated handover and updates `.witness/handovers/latest.md` |
-| `Witness: Validate Handover` | After generating or editing a handover | Writes a validation report and flags missing sections, placeholders, or broken links |
-| `Witness: Create Resume Probe` | The handoff is high-stakes and should be tested | Creates a quiz-style probe to check whether the handover is usable |
-| `Witness: Create Context Packet` | You want one reviewed artifact for the next session | Combines current state and latest handover with references to supporting artifacts |
-
-### Subagent Tracking
-
-Use these when you delegate work to another agent and need a traceable handoff.
-
-| Command | Use it when | What it does |
-|---------|-------------|--------------|
-| `Witness: Record Subagent Report` | You only need a lightweight flat record | Creates a single subagent report file |
-| `Witness: Start Subagent Task` | You are dispatching a bounded subagent task | Creates a ledger contract with goal and acceptance criteria |
-| `Witness: Create Subagent Context Packet` | Before giving context to the subagent | Creates a scoped context packet for that subagent only |
-| `Witness: Record Subagent Evidence` | After the subagent finishes work | Records files inspected, files changed, actions, and deviations |
-| `Witness: Complete Subagent Task` | The subagent has produced a result | Creates the completion report with status and gaps |
-| `Witness: Review Subagent Task` | Before integrating subagent output | Records acceptance, conditions, rejection, and integration actions |
-
-### Guided Workflows
-
-These commands orchestrate several smaller commands while preserving developer confirmation.
-
-| Command | Use it when | What it does |
-|---------|-------------|--------------|
-| `Witness: Checkpoint Now` | You want a fuller checkpoint than the beginner checkpoint | Runs workspace observation, risk assessment, then asks for a follow-up |
-| `Witness: Prepare Session Switch` | You are ending a meaningful session and want a full handoff package | Runs handover generation, validation, resume probe, and context packet creation |
-| `Witness: Resume Session` | You want to resume from an existing context packet | Opens a selected context packet and offers resume follow-up actions |
-
-### Evaluation
-
-| Command | Use it when | What it does |
-|---------|-------------|--------------|
-| `Witness: Generate Evaluation Summary` | You want a deterministic report for a session | Summarizes command activity, artifacts, risk, subagents, handovers, and observable degradation signals |
-
----
-
-## Agent-Assisted Maintenance
-
-Witness can help keep project memory current without taking control away from you.
-
-When Witness detects that project memory needs maintenance, run:
-
-```text
-Witness: Update Project Memory with Agent
-```
-
-Witness opens a strict prompt for your coding agent. The prompt limits the agent to specific
-`.witness/` files and tells it not to touch application source code.
-
-After the coding agent drafts updates, run:
-
-```text
-Witness: Validate Artifact Maintenance
-```
-
-Witness checks the drafted artifacts and opens a validation report for your review.
-
-The boundary is:
-
-```text
-LLM may draft. Witness validates. Developer approves.
-```
-
----
-
-## What Witness Does Not Do
-
-Witness is deliberately limited.
-
-- It does not replace your coding agent.
-- It does not call an LLM directly.
-- It does not manage API keys.
-- It does not automatically inject context into AI chats.
-- It does not automatically rewrite `current-state.md`.
-- It does not automatically generate handovers without developer confirmation.
-- It does not capture raw AI chat transcripts.
-- It does not capture hidden model reasoning.
-- It does not automatically switch sessions.
-
-These limits are part of the design. Witness keeps continuity visible and reviewable.
+You do not need these on day one.
 
 ---
 
 ## Current Status
 
-Witness is currently an early public project. v7.5 is complete.
+v8.4 complete.
 
-- 31 public commands
-- 32 activation events
-- no runtime dependencies
-- beginner workflow implemented
-- first-use walkthrough implemented
-- safe task restart implemented
-- status bar wording cleanup implemented
-- status bar guidance implemented
-- agent-assisted artifact maintenance implemented
+- 40 public commands
+- 41 activation events
+- 0 runtime dependencies
+- workflow-first aliases implemented
+- Witness Cheatsheet implemented
+- status bar grouped by Recommended, Main Actions, Maintenance, and More Actions
+- README and onboarding simplified around the v8 workflow surface
 
 ---
 
@@ -621,11 +283,11 @@ Witness is currently an early public project. v7.5 is complete.
 The README is the first-user guide. Deeper implementation and workflow notes live in `docs/`.
 
 | Document | Purpose |
-|----------|---------|
+|---|---|
 | `docs/workflow.md` | Full Witness workflow and command phases |
 | `docs/architecture.md` | Extension architecture and artifact system |
 | `docs/product-ux-principles.md` | Product boundaries and UX principles |
-| `docs/v6-implementation-plan.md` | v6 maintenance design and implementation notes |
+| `docs/v8-implementation-plan.md` | v8 workflow-first command surface plan |
 | `docs/v6-validation-report.md` | v6 validation results |
 
 ---

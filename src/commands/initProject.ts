@@ -82,7 +82,7 @@ export async function performProjectInit(
     await writeGitkeep(subdirUri);
   }
 
-  // Populate the four top-level documents from bundled templates.
+  // Populate the top-level documents from bundled templates.
   for (const filename of ROOT_DOC_FILES) {
     const content = await loadTemplate(context, filename);
     const destUri = vscode.Uri.joinPath(witnessRoot, filename);
@@ -126,7 +126,7 @@ export async function performProjectInit(
  * Implementation of the `Witness: Initialize Project` command.
  *
  * Creates the `.witness/` directory tree in the current workspace root,
- * populates the four top-level documents from bundled templates, copies the
+ * populates the top-level documents from bundled templates, copies the
  * twelve template files into `.witness/templates/`, writes the Agent Harness
  * Pack entry point to `.witness/AGENTS.md`, copies the harness protocol
  * files into `.witness/harness/`, and writes `.gitkeep` files into the empty

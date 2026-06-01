@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// statusBar.ts — Witness status bar assistant (v6.6).
+// statusBar.ts — Witness status bar assistant (v8.3).
 // ---------------------------------------------------------------------------
 //
 // Displays current continuity state in the VS Code status bar and offers a
@@ -12,10 +12,9 @@
 //   Section 3 — More Actions: existing advanced commands.
 // More actions remain available; they are visually separated below.
 //
-// v6.6 change: Recommended item priority updated to surface v6 maintenance
-// needs (C/D) before the legacy continuity resolver (E). Main Actions
-// extended with two v6 commands. Tooltip includes one concise maintenance
-// line.
+// v8.3 change: status bar click menu uses workflow-first aliases in Main
+// Actions, moves maintenance aliases into their own section, and keeps
+// technical/original commands under More Actions.
 //
 // Design invariants:
 //   - One status bar item, created in `initializeWitnessStatusBar` and never
@@ -36,7 +35,10 @@ import * as vscode from 'vscode';
 import { getWorkspaceRoot } from './witnessPaths';
 import { computeWorkspaceStatus, WitnessWorkspaceStatus } from './workspaceStatus';
 import { resolveTopIssue } from './continuityResolver';
-import { computeMaintenanceNeed } from './maintenanceTriggerEngine';
+import {
+  computeMaintenanceNeed,
+  MaintenanceNeedKind,
+} from './maintenanceTriggerEngine';
 
 // ---------------------------------------------------------------------------
 // Module-level state
@@ -79,11 +81,13 @@ const STATUS_ACTIONS_COMMAND = 'witness.openStatusActions';
  *
  * Label priority:
  *   1. No workspace root        → `Witness: No Workspace`
- *   2. activeSessionId is null  → `Witness: No Session`
+ *   2. activeSessionId is null  → `Witness: Start`
  *   3. severity critical        → `Witness: Attention`
- *   4. severity warning         → `Witness: Review Needed`
- *   5. info + id not all-clear  → `Witness: Checkpoint`
- *   6. info + id all-clear      → `Witness: OK`
+ *   4. maintenance save need    → `Witness: Save Needed`
+ *   5. subagent review need     → `Witness: Review Needed`
+ *   6. severity warning         → `Witness: Review Needed`
+ *   7. info + id not all-clear  → `Witness: Checkpoint`
+ *   8. info + id all-clear      → `Witness: OK`
  */
 function statusLabel(status: WitnessWorkspaceStatus | null, hasWorkspace: boolean): string {
   if (!hasWorkspace) {
@@ -93,12 +97,25 @@ function statusLabel(status: WitnessWorkspaceStatus | null, hasWorkspace: boolea
     return 'Witness: Status Error';
   }
   if (status.activeSessionId === null) {
-    return 'Witness: No Session';
+    return 'Witness: Start';
   }
   const { severity, id } = status.suggestedAction;
   if (severity === 'critical') {
     return 'Witness: Attention';
   }
+
+  try {
+    const need = computeMaintenanceNeed({ status });
+    if (isSaveMaintenanceNeed(need.kind)) {
+      return 'Witness: Save Needed';
+    }
+    if (need.kind === 'review-subagent-artifacts') {
+      return 'Witness: Review Needed';
+    }
+  } catch {
+    // Non-fatal: fall back to the legacy severity/id mapping.
+  }
+
   if (severity === 'warning') {
     return 'Witness: Review Needed';
   }
@@ -107,6 +124,14 @@ function statusLabel(status: WitnessWorkspaceStatus | null, hasWorkspace: boolea
     return 'Witness: OK';
   }
   return 'Witness: Checkpoint';
+}
+
+function isSaveMaintenanceNeed(kind: MaintenanceNeedKind): boolean {
+  return (
+    kind === 'update-current-state' ||
+    kind === 'create-checkpoint' ||
+    kind === 'prepare-handover'
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -359,20 +384,54 @@ function buildRecommendedItem(
   };
 }
 
+function normalizeWorkflowCommandId(commandId: string | undefined): string | undefined {
+  switch (commandId) {
+    case 'witness.startWithWitness':
+    case 'witness.startTrackingTask':
+      return 'witness.start';
+    case 'witness.showWorkspaceStatus':
+      return 'witness.status';
+    case 'witness.createCheckpoint':
+      return 'witness.saveProgress';
+    case 'witness.resumeWithWitness':
+      return 'witness.resume';
+    case 'witness.startNewTask':
+      return 'witness.switchTask';
+    case 'witness.resolveContinuityIssue':
+      return 'witness.fixIssue';
+    case 'witness.updateProjectMemoryWithAgent':
+      return 'witness.updateMemory';
+    case 'witness.validateArtifactMaintenance':
+      return 'witness.checkMemoryUpdate';
+    default:
+      return commandId;
+  }
+}
+
+function normalizeRecommendedItem(item: StatusQuickPickItem): StatusQuickPickItem {
+  return {
+    ...item,
+    commandId: normalizeWorkflowCommandId(item.commandId),
+  };
+}
+
 // ---------------------------------------------------------------------------
 // QuickPick list builder
 // ---------------------------------------------------------------------------
 
 /**
- * Builds the beginner-first QuickPick item list for the status bar (v6.6).
+ * Builds the workflow-first QuickPick item list for the status bar (v8.3).
  *
  * Structure:
  *   Separator — "Recommended"
  *     One context-aware top action (A–F priority per v6.6 spec).
  *   Separator — "Main Actions"
- *     Seven beginner-safe commands, deduplicated against recommended.
+ *     Seven everyday workflow aliases, deduplicated against recommended.
+ *   Separator — "Maintenance"
+ *     Two artifact-maintenance aliases, deduplicated against recommended/main.
  *   Separator — "More Actions"
- *     Existing advanced commands, deduplicated against recommended and main.
+ *     Existing original and advanced commands, deduplicated against prior
+ *     sections by workflow-equivalent command ID.
  *
  * Separator items use `vscode.QuickPickItemKind.Separator` and have no
  * `commandId`. The handler guards for this before calling `executeCommand`.
@@ -380,59 +439,130 @@ function buildRecommendedItem(
 function buildQuickPickItems(
   status: WitnessWorkspaceStatus | null
 ): StatusQuickPickItem[] {
-  const recommended = buildRecommendedItem(status);
+  const recommended = normalizeRecommendedItem(buildRecommendedItem(status));
   const recommendedId = recommended.commandId;
 
   // --- Section 2: Main Actions ---
-  // Seven beginner-safe commands, deduplicated against the recommended item.
-  const beginnerCandidates: StatusQuickPickItem[] = [
+  const mainCandidates: StatusQuickPickItem[] = [
+    {
+      label: 'Witness: Start',
+      description: 'Begin a tracked work block and get a coding-agent prompt.',
+      commandId: 'witness.start',
+    },
+    {
+      label: 'Witness: Save Progress',
+      description: 'Save enough project memory for a later AI session.',
+      commandId: 'witness.saveProgress',
+    },
+    {
+      label: 'Witness: Resume',
+      description: 'Generate a copy-ready resume prompt.',
+      commandId: 'witness.resume',
+    },
+    {
+      label: 'Witness: Switch Task',
+      description: 'Safely move from the current work block to a new task.',
+      commandId: 'witness.switchTask',
+    },
+    {
+      label: 'Witness: Status',
+      description: 'Open the detailed Witness status report.',
+      commandId: 'witness.status',
+    },
+    {
+      label: 'Witness: Cheatsheet',
+      description: 'Open the one-page workflow guide.',
+      commandId: 'witness.cheatsheet',
+    },
+    {
+      label: 'Witness: Fix Issue',
+      description: 'Explain and resolve the current top Witness issue.',
+      commandId: 'witness.fixIssue',
+    },
+  ];
+  const mainItems = mainCandidates.filter(
+    item => normalizeWorkflowCommandId(item.commandId) !== recommendedId
+  );
+
+  // --- Section 3: Maintenance ---
+  const knownIds = new Set<string | undefined>([
+    recommendedId,
+    ...mainItems.map(i => normalizeWorkflowCommandId(i.commandId)),
+  ]);
+  const maintenanceCandidates: StatusQuickPickItem[] = [
+    {
+      label: 'Witness: Update Memory',
+      description: 'Generate a prompt for your coding agent to update project memory.',
+      commandId: 'witness.updateMemory',
+    },
+    {
+      label: 'Witness: Check Memory Update',
+      description: 'Validate that artifact-only maintenance stayed inside .witness/',
+      commandId: 'witness.checkMemoryUpdate',
+    },
+  ];
+  const maintenanceItems = maintenanceCandidates.filter(
+    item => !knownIds.has(normalizeWorkflowCommandId(item.commandId))
+  );
+
+  // --- Section 4: More Actions ---
+  // Deduplicated against the recommended workflow equivalent. Original command
+  // names remain available here unless they duplicate the current top action.
+  const allKnownIds = new Set<string | undefined>([
+    ...knownIds,
+    ...maintenanceItems.map(i => i.commandId),
+  ]);
+  const advancedCandidates: StatusQuickPickItem[] = [
+    {
+      label: 'Witness: Enable for This Project',
+      description: 'Initialize Witness for this workspace',
+      commandId: 'witness.enableProject',
+    },
+    {
+      label: 'Witness: Start with Witness',
+      description: 'Original compressed first-use entry point',
+      commandId: 'witness.startWithWitness',
+    },
     {
       label: 'Witness: Start Tracking This Task',
-      description: 'Begin a tracked work block and get a coding-agent prompt.',
+      description: 'Original beginner command for starting task tracking',
       commandId: 'witness.startTrackingTask',
     },
     {
+      label: 'Witness: Start New Task',
+      description: 'Original command for switching tasks safely',
+      commandId: 'witness.startNewTask',
+    },
+    {
       label: 'Witness: Create Checkpoint',
-      description: 'Save enough project memory for a later AI session.',
+      description: 'Original command for saving project memory',
       commandId: 'witness.createCheckpoint',
     },
     {
       label: 'Witness: Resume with Witness',
-      description: 'Generate a copy-ready resume prompt.',
+      description: 'Original command for generating a resume prompt',
       commandId: 'witness.resumeWithWitness',
     },
     {
       label: 'Witness: Resolve Continuity Issue',
-      description: 'Explain and resolve the current top Witness issue.',
+      description: 'Original command for resolving the current top Witness issue',
       commandId: 'witness.resolveContinuityIssue',
     },
     {
       label: 'Witness: Update Project Memory with Agent',
-      description: 'Generate a prompt for your coding agent to update project memory.',
+      description: 'Original command for agent-assisted memory updates',
       commandId: 'witness.updateProjectMemoryWithAgent',
     },
     {
       label: 'Witness: Validate Artifact Maintenance',
-      description: 'Validate that artifact-only maintenance stayed inside .witness/',
+      description: 'Original command for checking agent-written memory updates',
       commandId: 'witness.validateArtifactMaintenance',
     },
     {
       label: 'Witness: Show Workspace Status',
-      description: 'Open the detailed Witness status report.',
+      description: 'Original command for opening the detailed status report',
       commandId: 'witness.showWorkspaceStatus',
     },
-  ];
-  const beginnerItems = beginnerCandidates.filter(
-    item => item.commandId !== recommendedId
-  );
-
-  // --- Section 3: More Actions ---
-  // Deduplicated against recommended and all main items shown.
-  const knownIds = new Set<string | undefined>([
-    recommendedId,
-    ...beginnerItems.map(i => i.commandId),
-  ]);
-  const advancedCandidates: StatusQuickPickItem[] = [
     {
       label: 'Witness: Start Session',
       description: 'Begin a new tracked session',
@@ -449,6 +579,11 @@ function buildQuickPickItems(
       commandId: 'witness.observeWorkspace',
     },
     {
+      label: 'Witness: Create ADR',
+      description: 'Record an architecture decision',
+      commandId: 'witness.createADR',
+    },
+    {
       label: 'Witness: Assess Continuity Risk',
       description: 'Assess and record continuity risk for the current session',
       commandId: 'witness.assessRisk',
@@ -459,9 +594,49 @@ function buildQuickPickItems(
       commandId: 'witness.generateHandover',
     },
     {
+      label: 'Witness: Validate Handover',
+      description: 'Validate a handover document for resume quality',
+      commandId: 'witness.validateHandover',
+    },
+    {
+      label: 'Witness: Create Resume Probe',
+      description: 'Create a resume-quality probe document',
+      commandId: 'witness.createResumeProbe',
+    },
+    {
+      label: 'Witness: Compress Current State',
+      description: 'Open current-state.md for manual compression',
+      commandId: 'witness.compressState',
+    },
+    {
       label: 'Witness: Create Context Packet',
       description: 'Assemble a context packet for the next session',
       commandId: 'witness.createContextPacket',
+    },
+    {
+      label: 'Witness: Record Subagent Report',
+      description: 'Record a subagent report',
+      commandId: 'witness.recordSubagent',
+    },
+    {
+      label: 'Witness: Start Subagent Task',
+      description: 'Start a tracked subagent task',
+      commandId: 'witness.startSubagentTask',
+    },
+    {
+      label: 'Witness: Create Subagent Context Packet',
+      description: 'Create a context packet for subagent work',
+      commandId: 'witness.createSubagentContextPacket',
+    },
+    {
+      label: 'Witness: Record Subagent Evidence',
+      description: 'Record evidence for a subagent task',
+      commandId: 'witness.recordSubagentEvidence',
+    },
+    {
+      label: 'Witness: Complete Subagent Task',
+      description: 'Record subagent task completion',
+      commandId: 'witness.completeSubagentTask',
     },
     {
       label: 'Witness: Review Subagent Task',
@@ -480,7 +655,9 @@ function buildQuickPickItems(
     },
   ];
   const advancedItems = advancedCandidates.filter(
-    item => !knownIds.has(item.commandId)
+    item =>
+      !allKnownIds.has(item.commandId) &&
+      normalizeWorkflowCommandId(item.commandId) !== recommendedId
   );
 
   // --- Assemble ---
@@ -493,7 +670,9 @@ function buildQuickPickItems(
     separator('Recommended'),
     recommended,
     separator('Main Actions'),
-    ...beginnerItems,
+    ...mainItems,
+    separator('Maintenance'),
+    ...maintenanceItems,
     separator('More Actions'),
     ...advancedItems,
   ];

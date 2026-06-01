@@ -50,6 +50,15 @@
     "onCommand:witness.generateEvaluationSummary",
     "onCommand:witness.resolveContinuityIssue",
     "onCommand:witness.startWithWitness",
+    "onCommand:witness.start",
+    "onCommand:witness.status",
+    "onCommand:witness.saveProgress",
+    "onCommand:witness.resume",
+    "onCommand:witness.switchTask",
+    "onCommand:witness.fixIssue",
+    "onCommand:witness.updateMemory",
+    "onCommand:witness.checkMemoryUpdate",
+    "onCommand:witness.cheatsheet",
     "onCommand:witness.startNewTask",
     "onCommand:witness.enableProject",
     "onCommand:witness.startTrackingTask",
@@ -178,6 +187,51 @@
       {
         "command": "witness.startWithWitness",
         "title": "Start with Witness",
+        "category": "Witness"
+      },
+      {
+        "command": "witness.start",
+        "title": "Start",
+        "category": "Witness"
+      },
+      {
+        "command": "witness.status",
+        "title": "Status",
+        "category": "Witness"
+      },
+      {
+        "command": "witness.saveProgress",
+        "title": "Save Progress",
+        "category": "Witness"
+      },
+      {
+        "command": "witness.resume",
+        "title": "Resume",
+        "category": "Witness"
+      },
+      {
+        "command": "witness.switchTask",
+        "title": "Switch Task",
+        "category": "Witness"
+      },
+      {
+        "command": "witness.fixIssue",
+        "title": "Fix Issue",
+        "category": "Witness"
+      },
+      {
+        "command": "witness.updateMemory",
+        "title": "Update Memory",
+        "category": "Witness"
+      },
+      {
+        "command": "witness.checkMemoryUpdate",
+        "title": "Check Memory Update",
+        "category": "Witness"
+      },
+      {
+        "command": "witness.cheatsheet",
+        "title": "Cheatsheet",
         "category": "Witness"
       },
       {

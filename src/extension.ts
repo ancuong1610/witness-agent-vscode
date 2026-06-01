@@ -9,6 +9,7 @@ import { createCheckpoint } from './commands/createCheckpoint';
 import { resumeWithWitness } from './commands/resumeWithWitness';
 import { updateProjectMemoryWithAgent } from './commands/updateProjectMemoryWithAgent';
 import { validateArtifactMaintenanceCmd } from './commands/validateArtifactMaintenance';
+import { openCheatsheet } from './commands/openCheatsheet';
 import { recordContext } from './commands/recordContext';
 import { observeWorkspace } from './commands/observeWorkspace';
 import { createADR } from './commands/createADR';
@@ -234,6 +235,64 @@ export function activate(context: vscode.ExtensionContext): void {
   );
   context.subscriptions.push(startWithWitnessCmd);
 
+  // v8.1 — Workflow-first command aliases.
+  // These aliases keep existing command IDs stable while exposing
+  // user-intent names for the main beginner moments.
+  const startAliasCmd = vscode.commands.registerCommand(
+    'witness.start',
+    () => vscode.commands.executeCommand('witness.startWithWitness')
+  );
+  context.subscriptions.push(startAliasCmd);
+
+  const statusAliasCmd = vscode.commands.registerCommand(
+    'witness.status',
+    () => vscode.commands.executeCommand('witness.showWorkspaceStatus')
+  );
+  context.subscriptions.push(statusAliasCmd);
+
+  const saveProgressAliasCmd = vscode.commands.registerCommand(
+    'witness.saveProgress',
+    () => vscode.commands.executeCommand('witness.createCheckpoint')
+  );
+  context.subscriptions.push(saveProgressAliasCmd);
+
+  const resumeAliasCmd = vscode.commands.registerCommand(
+    'witness.resume',
+    () => vscode.commands.executeCommand('witness.resumeWithWitness')
+  );
+  context.subscriptions.push(resumeAliasCmd);
+
+  const switchTaskAliasCmd = vscode.commands.registerCommand(
+    'witness.switchTask',
+    () => vscode.commands.executeCommand('witness.startNewTask')
+  );
+  context.subscriptions.push(switchTaskAliasCmd);
+
+  const fixIssueAliasCmd = vscode.commands.registerCommand(
+    'witness.fixIssue',
+    () => vscode.commands.executeCommand('witness.resolveContinuityIssue')
+  );
+  context.subscriptions.push(fixIssueAliasCmd);
+
+  const updateMemoryAliasCmd = vscode.commands.registerCommand(
+    'witness.updateMemory',
+    () => vscode.commands.executeCommand('witness.updateProjectMemoryWithAgent')
+  );
+  context.subscriptions.push(updateMemoryAliasCmd);
+
+  const checkMemoryUpdateAliasCmd = vscode.commands.registerCommand(
+    'witness.checkMemoryUpdate',
+    () => vscode.commands.executeCommand('witness.validateArtifactMaintenance')
+  );
+  context.subscriptions.push(checkMemoryUpdateAliasCmd);
+
+  // v8.2 — One-page beginner guide.
+  const cheatsheetCmd = vscode.commands.registerCommand(
+    'witness.cheatsheet',
+    () => openCheatsheet(context)
+  );
+  context.subscriptions.push(cheatsheetCmd);
+
   const startNewTaskCmd = vscode.commands.registerCommand(
     'witness.startNewTask',
     () => startNewTask(context)
@@ -266,7 +325,7 @@ export function activate(context: vscode.ExtensionContext): void {
   );
   context.subscriptions.push(validateArtifactMaintenanceCommand);
 
-  // 31 public commands registered (23 pre-v5 + 2 v5.1a + 2 v5.1b + 1 v6.4 + 1 v6.5 + 1 v7.1 + 1 v7.3).
+  // 40 public commands registered (31 through v7 + 8 v8.1 aliases + 1 v8.2 cheatsheet).
 
   // -------------------------------------------------------------------------
   // v3.4 — Status Bar Assistant.
