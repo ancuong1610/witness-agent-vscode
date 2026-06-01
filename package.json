@@ -2,7 +2,7 @@
   "name": "witness-agent",
   "displayName": "Witness Agent",
   "description": "A VS Code extension that creates a repo-local .witness/ continuity system for AI-assisted coding workflows.",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "publisher": "witness-agent",
   "license": "MIT",
   "repository": {
