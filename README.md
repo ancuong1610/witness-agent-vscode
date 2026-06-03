@@ -1,5 +1,8 @@
 # Witness Agent
 
+<img width="1197" height="759" alt="Screenshot 2026-05-18 at 23 14 57" src="https://github.com/user-attachments/assets/3671cb63-5ef7-4688-8fd5-81a0b6ddd5b6" />
+
+
 Witness helps your AI coding sessions remember what matters.
 
 Start:
