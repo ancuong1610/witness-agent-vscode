@@ -70,13 +70,15 @@ ${taskGoal}
 
 Follow .witness/AGENTS.md if available.
 
-Before editing, summarize:
-1. current goal
-2. relevant constraints
-3. open risks or unresolved work
-4. next safe step
+## After reading context
 
-Do not modify files until you confirm the plan with me.`;
+1. Summarize the current project state.
+2. Propose the next coding plan for this task.
+3. Ask the developer to approve or adjust the plan before editing source files.
+4. After implementation, remind the developer to run \`Witness: Save Progress\`.
+
+Do not update \`.witness/\` files unless the developer asks you to save progress or update memory.
+Do not claim validation passed unless actual validation output exists.`;
 }
 
 // ---------------------------------------------------------------------------

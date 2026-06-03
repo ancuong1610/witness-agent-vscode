@@ -4,6 +4,10 @@ Copy this template to `sessions/YYYY-MM-DD-<id>.md` and fill in the fields as th
 progresses. Update "Files Touched" and "Decisions Made" incrementally during the session — do
 not try to reconstruct them at the end from memory.
 
+This session starts as a tracking template. After meaningful work, run `Witness: Save Progress`.
+The generated prompt should update this file with files touched, decisions made, validation results,
+implementation outcome, and next safe step. Do not manually delete this session file.
+
 ---
 
 ## Session ID

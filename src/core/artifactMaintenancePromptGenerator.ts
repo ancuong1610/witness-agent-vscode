@@ -195,6 +195,48 @@ function buildRequiredSectionsSection(sections: string[]): string {
   ].join("\n");
 }
 
+function buildCurrentStatePlaceholderRulesSection(): string {
+  return [
+    "PLACEHOLDER RULES",
+    "- Replace obvious placeholders only with confirmed project files or developer-provided facts.",
+    "- Do not invent project purpose, architecture, stack, or status.",
+    "- If uncertain, write `Unknown` or `To be confirmed`.",
+    "- Record files changed, implementation outcome, validation results, and next safe step.",
+    "- Update the active session file only if the Save Progress flow explicitly asks for it.",
+    "- Mention remaining uncertainty.",
+  ].join("\n");
+}
+
+function buildSessionRecordUpdateSection(activeSessionId: string | null | undefined): string {
+  const activeSessionPath = activeSessionId
+    ? `.witness/sessions/${activeSessionId}.md`
+    : ".witness/sessions/<activeSessionId>.md";
+
+  return [
+    "SESSION RECORD UPDATE",
+    "Update these Witness files:",
+    "- .witness/current-state.md",
+    `- ${activeSessionPath} (active session file; placeholder form: .witness/sessions/<activeSessionId>.md)`,
+    "",
+    "Record in the active session:",
+    "- goal / vertical slice",
+    "- files touched",
+    "- implementation outcome",
+    "- decisions made",
+    "- validation run and result",
+    "- open risks / unresolved work",
+    "- next safe step",
+    "",
+    "Rules:",
+    "- Replace placeholders only with confirmed facts.",
+    "- Do not invent project facts.",
+    "- Use `Unknown` or `To be confirmed` when unsure.",
+    "- Do not create ADRs automatically.",
+    "- If an architecture decision is important and stable, ask the developer whether to create an ADR candidate.",
+    "- ADR candidates must be developer-approved.",
+  ].join("\n");
+}
+
 /**
  * Build the Human review requirement section.
  * Identical for all prompt kinds.
@@ -250,6 +292,9 @@ function buildUpdateCurrentStatePrompt(
   filesToRead.push(".witness/handovers/latest.md (if present and relevant)");
 
   const allowedWrites = [".witness/current-state.md"];
+  if (activeSessionId) {
+    allowedWrites.push(`.witness/sessions/${activeSessionId}.md`);
+  }
 
   const forbiddenWrites = [
     ...COMMON_FORBIDDEN_WRITES,
@@ -276,6 +321,8 @@ function buildUpdateCurrentStatePrompt(
       formatList(filesToRead),
     ].join("\n"),
     buildEvidenceSection(evidence),
+    buildCurrentStatePlaceholderRulesSection(),
+    buildSessionRecordUpdateSection(activeSessionId),
     buildAllowedWritesSection(allowedWrites),
     buildForbiddenWritesSection(forbiddenWrites),
     buildRequiredSectionsSection(requiredSections),

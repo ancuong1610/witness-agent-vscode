@@ -6,6 +6,25 @@ action. If this file is stale, handovers will be stale.
 
 Update this file at the end of every session or whenever the state meaningfully changes.
 
+New project note:
+This file starts as a template. It becomes useful after your first meaningful coding step.
+
+What to do:
+1. Start work with `Witness: Start`.
+2. Code normally.
+3. When you finish meaningful work, run `Witness: Save Progress`.
+4. Choose the memory-update option if Witness recommends it.
+5. Paste the generated prompt into your coding agent.
+6. After the coding agent updates `.witness/`, run `Witness: Check Memory Update`.
+
+Rules:
+- Replace placeholders only with confirmed project facts.
+- Do not invent architecture details.
+- Keep unknown fields as `Unknown` or `To be confirmed`.
+- Record uncertainty clearly.
+- Important decisions should be captured here first; ADRs are advanced and only needed when the
+  decision is stable and developer-approved.
+
 ---
 
 ## Project

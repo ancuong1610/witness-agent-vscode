@@ -11,6 +11,10 @@ import {
   openStartPrompt,
   promptForTaskGoal,
 } from './startTrackingTask';
+import {
+  detectWitnessProjectMigrationNeed,
+  migrateWitnessProjectSupportFiles,
+} from '../core/witnessProjectMigration';
 
 /**
  * Implementation of `Witness: Start with Witness` (v7.1).
@@ -33,6 +37,7 @@ export async function startWithWitness(
   let taskGoal = '';
   let sessionId: string | null = null;
   let cancelledAt: string | null = null;
+  let upgradedProjectFiles = false;
 
   try {
     const workspaceRoot = getWorkspaceRoot();
@@ -53,6 +58,41 @@ export async function startWithWitness(
       initializedProject = true;
     }
 
+    if (!initializedProject) {
+      const migrationChoice = await promptForSupportFileUpgrade(witnessRoot);
+      if (migrationChoice === 'cancel') {
+        cancelledAt = 'project-upgrade';
+        await emitWitnessEvent({
+          workspaceRoot,
+          eventName: 'witness.start_with_witness.started',
+          commandId: 'witness.startWithWitness',
+          sessionId: null,
+          status: 'cancelled',
+          durationMs: elapsed(),
+          attributes: {
+            initialized_project: initializedProject,
+            upgraded_project_files: upgradedProjectFiles,
+            active_session_created: false,
+            goal_length: 0,
+            used_generic_goal_warning: usedGenericGoalWarning,
+            prompt_opened: false,
+            copied_to_clipboard: false,
+            completed: false,
+            cancelled_at: cancelledAt,
+          },
+        });
+        return;
+      }
+
+      if (migrationChoice === 'upgrade') {
+        await migrateWitnessProjectSupportFiles(context, witnessRoot);
+        upgradedProjectFiles = true;
+        vscode.window.showInformationMessage(
+          'Witness: Safe support files upgraded. Starting task...'
+        );
+      }
+    }
+
     const goalResult = await promptForTaskGoal();
     usedGenericGoalWarning = goalResult.usedGenericGoalWarning;
     if (!goalResult.taskGoal) {
@@ -66,6 +106,7 @@ export async function startWithWitness(
         durationMs: elapsed(),
         attributes: {
           initialized_project: initializedProject,
+          upgraded_project_files: upgradedProjectFiles,
           active_session_created: false,
           goal_length: 0,
           used_generic_goal_warning: usedGenericGoalWarning,
@@ -86,7 +127,7 @@ export async function startWithWitness(
 
     const presented = await openStartPrompt(
       taskGoal,
-      'Witness: Prompt ready. Paste it into your coding agent and start coding.'
+      'Paste this prompt into your coding agent. After it proposes a plan, approve or adjust it, then code normally. When meaningful work is done, run `Witness: Save Progress`.'
     );
     promptOpened = presented.promptOpened;
     copiedToClipboard = presented.copiedToClipboard;
@@ -101,6 +142,7 @@ export async function startWithWitness(
       durationMs: elapsed(),
       attributes: {
         initialized_project: initializedProject,
+        upgraded_project_files: upgradedProjectFiles,
         active_session_created: activeSessionCreated,
         goal_length: taskGoal.length,
         used_generic_goal_warning: usedGenericGoalWarning,
@@ -121,6 +163,7 @@ export async function startWithWitness(
       durationMs: elapsed(),
       attributes: {
         initialized_project: initializedProject,
+        upgraded_project_files: upgradedProjectFiles,
         active_session_created: activeSessionCreated,
         goal_length: taskGoal.length,
         used_generic_goal_warning: usedGenericGoalWarning,
@@ -132,4 +175,33 @@ export async function startWithWitness(
     });
     vscode.window.showErrorMessage(`Witness: Start with Witness failed — ${message}`);
   }
+}
+
+type SupportFileUpgradeChoice = 'upgrade' | 'skip' | 'cancel';
+
+async function promptForSupportFileUpgrade(
+  witnessRoot: vscode.Uri
+): Promise<SupportFileUpgradeChoice> {
+  const migrationNeed = await detectWitnessProjectMigrationNeed(witnessRoot);
+  if (!migrationNeed.migrationNeeded) {
+    return 'skip';
+  }
+
+  const choice = await vscode.window.showWarningMessage(
+    'Witness: This project uses older Witness support files. Upgrade safe Witness support files before starting?',
+    { modal: true },
+    'Upgrade and Start',
+    'Start Without Upgrade',
+    'Cancel'
+  );
+
+  if (choice === 'Upgrade and Start') {
+    return 'upgrade';
+  }
+
+  if (choice === 'Start Without Upgrade') {
+    return 'skip';
+  }
+
+  return 'cancel';
 }

@@ -306,7 +306,7 @@ export async function startTrackingTask(context: vscode.ExtensionContext): Promi
     //          copy pattern is not duplicated across beginner commands.
     const presented = await openStartPrompt(
       taskGoal,
-      `Witness: Tracking "${sessionId}". Paste the prompt into your coding agent.`
+      'Paste this prompt into your coding agent. After it proposes a plan, approve or adjust it, then code normally. When meaningful work is done, run `Witness: Save Progress`.'
     );
     promptOpened = presented.promptOpened;
     copiedToClipboard = presented.copiedToClipboard;

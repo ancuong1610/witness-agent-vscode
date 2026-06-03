@@ -1,7 +1,10 @@
 # Witness Agent Commands
 
-This is a cheat sheet of all Witness Agent command palette commands. Open the Command Palette
-(`Cmd+Shift+P` / `Ctrl+Shift+P`) and type `Witness` to filter to these commands.
+This is a cheat sheet of Witness Agent commands. Open the Command Palette
+(`Cmd+Shift+P` / `Ctrl+Shift+P`) and type `Witness` to find the main workflow commands.
+Advanced commands are documented here for transparency and remain available through the Witness
+status bar More Actions menu or internal workflows, but they are not all shown directly in the
+normal Command Palette surface.
 
 Witness Agent gives developers transparency, control, and tracing capability across sessions with
 coding agents. It is not a coding agent. It does not write code, execute tasks, or communicate
@@ -44,7 +47,8 @@ Use these when the coding agent helps update `.witness/` memory artifacts.
 ## Compatibility / manual names
 
 Older or more explicit command names. These still exist for compatibility and for users who prefer
-explicit control. They are not deprecated; they are simply not the first-use surface.
+explicit control. They are not deprecated; they are hidden from the normal Command Palette surface
+and are available through More Actions or internal workflows.
 
 | Command | Command ID | Prefer for most users |
 |---|---|---|
@@ -64,7 +68,7 @@ explicit control. They are not deprecated; they are simply not the first-use sur
 ## Advanced / creator tools
 
 Useful for architecture, handover, risk, and explicit context-management work. These commands are
-not required for first use.
+not required for first use and are hidden from the normal Command Palette surface.
 
 | Command | Command ID | Use when |
 |---|---|---|
@@ -82,7 +86,7 @@ not required for first use.
 ## Subagent / orchestrator tools
 
 For delegated or orchestrated coding-agent workflows. These are not needed for normal single-agent
-use.
+use and are hidden from the normal Command Palette surface.
 
 | Command | Command ID | Use when |
 |---|---|---|
@@ -97,7 +101,8 @@ use.
 
 ## Debug / evaluation tools
 
-For debugging, evaluation, research, or project-maintainer workflows.
+For debugging, evaluation, research, or project-maintainer workflows. These commands are hidden
+from the normal Command Palette surface.
 
 | Command | Command ID | Use when |
 |---|---|---|
@@ -114,7 +119,8 @@ For debugging, evaluation, research, or project-maintainer workflows.
 ## Detailed command reference
 
 The sections below keep the full command documentation. Advanced commands remain available for
-creator, orchestrator, debug, research, and power-user workflows.
+creator, orchestrator, debug, research, and power-user workflows, even when hidden from the normal
+Command Palette surface.
 
 ---
 
@@ -122,7 +128,8 @@ creator, orchestrator, debug, research, and power-user workflows.
 
 These commands are the recommended starting point for new users. They wrap existing Witness
 logic with plain-language names and guided messages. Advanced commands (Groups 1–8) remain fully
-available and are unchanged.
+available and are unchanged, but they are not all contributed to the normal Command Palette
+surface.
 
 A Witness session is a project work record, not a Copilot/Claude/Codex chat session.
 Starting a new Witness session does not require opening a new coding-agent chat.
@@ -131,23 +138,23 @@ Starting a new Witness session does not require opening a new coding-agent chat.
 
 ## Workflow-First Command Aliases (v8.1)
 
-These beginner-friendly aliases expose the main Witness moments with user-intent names. They do not
-replace or remove the existing commands. Each alias delegates to an existing Witness workflow and
-keeps the original command ID available for docs, tests, and power-user use.
+These beginner-friendly commands expose the main Witness moments with user-intent names. Most
+delegate to existing Witness workflows and keep the original command ID available for docs, tests,
+and power-user use. `Witness: Save Progress` is the guided post-work entry point and can call
+checkpoint, memory-update, decision-note, or resume flows based on the user's choice.
 
-| Beginner alias | Command ID | Delegates to |
+| Beginner command | Command ID | Behavior |
 |---|---|---|
 | Witness: Start | `witness.start` | `witness.startWithWitness` |
 | Witness: Status | `witness.status` | `witness.showWorkspaceStatus` |
-| Witness: Save Progress | `witness.saveProgress` | `witness.createCheckpoint` |
+| Witness: Save Progress | `witness.saveProgress` | Guided save workflow |
 | Witness: Resume | `witness.resume` | `witness.resumeWithWitness` |
 | Witness: Switch Task | `witness.switchTask` | `witness.startNewTask` |
 | Witness: Fix Issue | `witness.fixIssue` | `witness.resolveContinuityIssue` |
 | Witness: Update Memory | `witness.updateMemory` | `witness.updateProjectMemoryWithAgent` |
 | Witness: Check Memory Update | `witness.checkMemoryUpdate` | `witness.validateArtifactMaintenance` |
 
-These aliases do not add new behavior, call an LLM, inject prompts automatically, or change status
-bar behavior.
+These commands do not call an LLM or inject prompts automatically.
 
 ---
 

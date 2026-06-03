@@ -1,9 +1,10 @@
 // ---------------------------------------------------------------------------
-// validateArtifactMaintenance.ts — Witness: Validate Artifact Maintenance (v6.5)
+// validateArtifactMaintenance.ts — Witness: Check Memory Update / Validate Artifact Maintenance (v9.6)
 // ---------------------------------------------------------------------------
 //
-// Validates that a recent agent-assisted artifact-maintenance task stayed
-// inside the `.witness/` boundary and produced the required artifact structure.
+// Validates existing `.witness/` changes from a recent agent-assisted
+// artifact-maintenance task. This command checks memory updates; it does not
+// update project memory itself.
 //
 // Design invariants:
 //   - Does NOT call any LLM.
@@ -15,17 +16,19 @@
 //   - Orchestration only: gather inputs → validate (pure) → report → telemetry.
 //   - No webview. No direct provider API. No automatic context injection.
 //
-// Changed-file detection strategy (v6.5):
-//   1. Try `observeGit` — use `dirtyFilePaths` if available.
-//   2. Offer QuickPick: use git-detected files or enter paths manually.
-//   3. If manual: InputBox, one path per line or comma-separated.
+// Changed-file detection strategy (v9.8.1):
+//   1. Recommend current-state, active session, latest checkpoint/snapshot,
+//      recent Witness markdown, and dirty Witness markdown files.
+//   2. Let the developer choose the recommended group or a narrower group.
+//   3. Keep manual path input as an advanced fallback.
 //
 // v6.5: Initial implementation.
 //
 // ---------------------------------------------------------------------------
 
 import * as vscode from 'vscode';
-import { getWorkspaceRoot } from '../core/witnessPaths';
+import { getWorkspaceRoot, getWitnessRoot } from '../core/witnessPaths';
+import { getCurrentSessionId } from '../core/sessionRegistry';
 import { observeGit } from '../core/gitObserver';
 import {
   validateArtifactMaintenance,
@@ -87,11 +90,24 @@ const KIND_PICK_ITEMS: KindPickItem[] = [
 ];
 
 // ---------------------------------------------------------------------------
-// Changed-file source QuickPick items
+// Witness file recommendation QuickPick items
 // ---------------------------------------------------------------------------
 
-interface FileSourcePickItem extends vscode.QuickPickItem {
-  source: "git" | "manual";
+interface FileRecommendationPickItem extends vscode.QuickPickItem {
+  source:
+    | "recommended"
+    | "current-state"
+    | "active-session"
+    | "latest-checkpoint"
+    | "recent-witness"
+    | "manual"
+    | "cancel";
+  filePaths: string[];
+}
+
+interface RecentWitnessFile {
+  path: string;
+  mtime: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -107,6 +123,246 @@ function parseManualPaths(raw: string): string[] {
     .split(/[\n,]+/)
     .map((p) => p.trim())
     .filter((p) => p.length > 0);
+}
+
+async function selectFilesToValidate(
+  workspaceRoot: vscode.Uri
+): Promise<string[] | null> {
+  const candidates = await buildWitnessFileRecommendations(workspaceRoot);
+
+  if (candidates.length === 0) {
+    return getManualFilePaths();
+  }
+
+  const picked = await vscode.window.showQuickPick(
+    [
+      ...candidates,
+      {
+        label: "Choose files manually",
+        description: "Advanced fallback: paste workspace-relative file paths",
+        source: "manual",
+        filePaths: [],
+      },
+      {
+        label: "Cancel",
+        description: "Do not validate memory updates right now",
+        source: "cancel",
+        filePaths: [],
+      },
+    ],
+    {
+      title: "Witness: Check Memory Update",
+      placeHolder: "What should Witness check?",
+    }
+  );
+
+  if (!picked || picked.source === "cancel") {
+    return null;
+  }
+
+  if (picked.source === "manual") {
+    return getManualFilePaths();
+  }
+
+  return picked.filePaths;
+}
+
+async function buildWitnessFileRecommendations(
+  workspaceRoot: vscode.Uri
+): Promise<FileRecommendationPickItem[]> {
+  const witnessRoot = getWitnessRoot(workspaceRoot);
+  const activeSessionId = await getCurrentSessionId(witnessRoot);
+  const currentStatePath = ".witness/current-state.md";
+  const activeSessionPath = activeSessionId
+    ? `.witness/sessions/${activeSessionId}.md`
+    : null;
+
+  const currentStateExists = await pathExists(workspaceRoot, currentStatePath);
+  const activeSessionExists = activeSessionPath
+    ? await pathExists(workspaceRoot, activeSessionPath)
+    : false;
+  const latestCheckpointPath = await findLatestCheckpointPath(witnessRoot);
+  const recentWitnessPaths = await findRecentWitnessMarkdownPaths(witnessRoot);
+  const dirtyWitnessPaths = await findDirtyWitnessPaths(workspaceRoot);
+
+  const recentCombined = uniquePaths([
+    ...dirtyWitnessPaths,
+    ...recentWitnessPaths,
+  ]).slice(0, 8);
+
+  const recommendedPaths = activeSessionExists
+    ? uniquePaths([currentStatePath, activeSessionPath].filter(isString))
+    : uniquePaths([
+        ...(currentStateExists ? [currentStatePath] : []),
+        ...recentCombined.slice(0, 4),
+      ]);
+
+  const items: FileRecommendationPickItem[] = [];
+
+  if (recommendedPaths.length > 0) {
+    items.push({
+      label: activeSessionExists
+        ? "Recommended: Current state + active session"
+        : "Recommended: Current state + recent Witness files",
+      description: summarizePaths(recommendedPaths),
+      source: "recommended",
+      filePaths: recommendedPaths,
+    });
+  }
+
+  if (currentStateExists) {
+    items.push({
+      label: "Current state only",
+      description: currentStatePath,
+      source: "current-state",
+      filePaths: [currentStatePath],
+    });
+  }
+
+  if (activeSessionExists && activeSessionPath) {
+    items.push({
+      label: "Active session only",
+      description: activeSessionPath,
+      source: "active-session",
+      filePaths: [activeSessionPath],
+    });
+  }
+
+  if (latestCheckpointPath) {
+    items.push({
+      label: "Latest checkpoint/snapshot",
+      description: latestCheckpointPath,
+      source: "latest-checkpoint",
+      filePaths: [latestCheckpointPath],
+    });
+  }
+
+  if (recentCombined.length > 0) {
+    items.push({
+      label: "Recent Witness files",
+      description: summarizePaths(recentCombined),
+      source: "recent-witness",
+      filePaths: recentCombined,
+    });
+  }
+
+  return items;
+}
+
+async function findDirtyWitnessPaths(workspaceRoot: vscode.Uri): Promise<string[]> {
+  const gitObs = await observeGit(workspaceRoot);
+  const dirtyPaths =
+    gitObs.available && gitObs.primary
+      ? gitObs.primary.dirtyFilePaths
+      : [];
+
+  return dirtyPaths.filter((path) =>
+    path.startsWith(".witness/") && path.endsWith(".md")
+  );
+}
+
+async function findLatestCheckpointPath(
+  witnessRoot: vscode.Uri
+): Promise<string | null> {
+  try {
+    const checkpointsRoot = vscode.Uri.joinPath(witnessRoot, "checkpoints");
+    const entries = await vscode.workspace.fs.readDirectory(checkpointsRoot);
+    let latest: RecentWitnessFile | null = null;
+
+    for (const [name, fileType] of entries) {
+      if (fileType !== vscode.FileType.File || !name.endsWith(".md")) {
+        continue;
+      }
+
+      const path = `.witness/checkpoints/${name}`;
+      const stat = await vscode.workspace.fs.stat(
+        vscode.Uri.joinPath(checkpointsRoot, name)
+      );
+      if (!latest || stat.mtime > latest.mtime) {
+        latest = { path, mtime: stat.mtime };
+      }
+    }
+
+    return latest?.path ?? null;
+  } catch {
+    return null;
+  }
+}
+
+async function findRecentWitnessMarkdownPaths(
+  witnessRoot: vscode.Uri
+): Promise<string[]> {
+  const recent: RecentWitnessFile[] = [];
+
+  await collectRecentWitnessMarkdown(witnessRoot, ".witness", recent);
+
+  return recent
+    .sort((a, b) => b.mtime - a.mtime)
+    .map((entry) => entry.path)
+    .filter((path) => !path.startsWith(".witness/telemetry/"))
+    .slice(0, 8);
+}
+
+async function collectRecentWitnessMarkdown(
+  dir: vscode.Uri,
+  relDir: string,
+  out: RecentWitnessFile[]
+): Promise<void> {
+  let entries: [string, vscode.FileType][];
+  try {
+    entries = await vscode.workspace.fs.readDirectory(dir);
+  } catch {
+    return;
+  }
+
+  for (const [name, fileType] of entries) {
+    const relPath = `${relDir}/${name}`;
+    const childUri = vscode.Uri.joinPath(dir, name);
+
+    if (fileType === vscode.FileType.Directory) {
+      if (relPath === ".witness/telemetry" || relPath === ".witness/templates") {
+        continue;
+      }
+      await collectRecentWitnessMarkdown(childUri, relPath, out);
+      continue;
+    }
+
+    if (fileType !== vscode.FileType.File || !relPath.endsWith(".md")) {
+      continue;
+    }
+
+    try {
+      const stat = await vscode.workspace.fs.stat(childUri);
+      out.push({ path: relPath, mtime: stat.mtime });
+    } catch {
+      // Ignore unreadable files.
+    }
+  }
+}
+
+async function pathExists(
+  workspaceRoot: vscode.Uri,
+  relPath: string
+): Promise<boolean> {
+  try {
+    await vscode.workspace.fs.stat(vscode.Uri.joinPath(workspaceRoot, relPath));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function uniquePaths(paths: string[]): string[] {
+  return Array.from(new Set(paths));
+}
+
+function summarizePaths(paths: string[]): string {
+  return paths.slice(0, 3).join(", ") +
+    (paths.length > 3 ? `, +${paths.length - 3} more` : "");
+}
+
+function isString(value: string | null): value is string {
+  return typeof value === "string";
 }
 
 /**
@@ -163,6 +419,8 @@ function buildValidationReport(
 
   const lines: string[] = [
     "# Witness Artifact Maintenance Validation",
+    "",
+    "This report validates existing .witness changes. It does not update memory itself.",
     "",
     statusLine,
     "",
@@ -234,6 +492,9 @@ function buildValidationReport(
     lines.push(
       "Validation passed. Review the artifact content and approve if it meets your expectations."
     );
+    lines.push(
+      "Continue coding, run Witness: Save Progress again later, or run Witness: Resume next time."
+    );
   }
 
   return lines.join("\n");
@@ -246,7 +507,8 @@ function buildValidationReport(
 /**
  * Implementation of the `Witness: Validate Artifact Maintenance` command (v6.5).
  *
- * Gathers changed files (from git or manual input), reads `.witness/` artifact
+ * Gathers changed files from recommended `.witness/` candidates or manual input,
+ * reads `.witness/` artifact
  * contents, calls the pure validator, and opens an unsaved markdown validation
  * report for developer review.
  *
@@ -296,119 +558,30 @@ export async function validateArtifactMaintenanceCmd(
     }
 
     // -------------------------------------------------------------------------
-    // 2. Obtain changed file paths — from git or manual input.
+    // 2. Choose existing `.witness/` files to validate.
     // -------------------------------------------------------------------------
 
-    let changedFiles: string[] = [];
-
-    // Try git observation.
-    const gitObs = await observeGit(workspaceRoot);
-    const gitDirtyPaths =
-      gitObs.available && gitObs.primary
-        ? gitObs.primary.dirtyFilePaths
-        : [];
-
-    if (gitDirtyPaths.length > 0) {
-      // Offer choice: use git-detected files or enter manually.
-      const sourceItems: FileSourcePickItem[] = [
-        {
-          label: `Use git-detected changes (${gitDirtyPaths.length} file${gitDirtyPaths.length === 1 ? "" : "s"})`,
-          description: gitDirtyPaths.slice(0, 5).join(", ") +
-            (gitDirtyPaths.length > 5 ? `, +${gitDirtyPaths.length - 5} more` : ""),
-          source: "git",
+    const changedFiles = await selectFilesToValidate(workspaceRoot);
+    if (changedFiles === null) {
+      cancelledAt = "file-selection";
+      await emitWitnessEvent({
+        workspaceRoot,
+        eventName: "witness.artifact_maintenance.validated",
+        commandId: "witness.validateArtifactMaintenance",
+        sessionId: null,
+        status: "cancelled",
+        durationMs: elapsed(),
+        attributes: {
+          status: validationStatus,
+          issue_count: issueCount,
+          changed_witness_file_count: changedWitnessFileCount,
+          changed_non_witness_file_count: changedNonWitnessFileCount,
+          expected_kind: expectedKindLabel,
+          completed,
+          cancelled_at: cancelledAt,
         },
-        {
-          label: "Enter file paths manually",
-          description: "Paste file paths — one per line or comma-separated",
-          source: "manual",
-        },
-      ];
-
-      const sourcePick = await vscode.window.showQuickPick(sourceItems, {
-        title: "Witness: Validate Artifact Maintenance — Changed Files",
-        placeHolder: "How should Witness get the list of changed files?",
       });
-
-      if (!sourcePick) {
-        cancelledAt = "file-source-selection";
-        await emitWitnessEvent({
-          workspaceRoot,
-          eventName: "witness.artifact_maintenance.validated",
-          commandId: "witness.validateArtifactMaintenance",
-          sessionId: null,
-          status: "cancelled",
-          durationMs: elapsed(),
-          attributes: {
-            status: validationStatus,
-            issue_count: issueCount,
-            changed_witness_file_count: changedWitnessFileCount,
-            changed_non_witness_file_count: changedNonWitnessFileCount,
-            expected_kind: expectedKindLabel,
-            completed,
-            cancelled_at: cancelledAt,
-          },
-        });
-        return;
-      }
-
-      if (sourcePick.source === "git") {
-        changedFiles = gitDirtyPaths;
-      } else {
-        const manualPaths = await getManualFilePaths();
-        if (manualPaths === null) {
-          cancelledAt = "manual-path-input";
-          await emitWitnessEvent({
-            workspaceRoot,
-            eventName: "witness.artifact_maintenance.validated",
-            commandId: "witness.validateArtifactMaintenance",
-            sessionId: null,
-            status: "cancelled",
-            durationMs: elapsed(),
-            attributes: {
-              status: validationStatus,
-              issue_count: issueCount,
-              changed_witness_file_count: changedWitnessFileCount,
-              changed_non_witness_file_count: changedNonWitnessFileCount,
-              expected_kind: expectedKindLabel,
-              completed,
-              cancelled_at: cancelledAt,
-            },
-          });
-          return;
-        }
-        changedFiles = manualPaths;
-      }
-    } else {
-      // Git unavailable or no dirty files — go straight to manual input.
-      const reason = !gitObs.available
-        ? "git is not available"
-        : "no dirty files detected by git";
-      vscode.window.showInformationMessage(
-        `Witness: ${reason.charAt(0).toUpperCase() + reason.slice(1)}. Please enter the changed file paths manually.`
-      );
-      const manualResult = await getManualFilePaths();
-      if (manualResult === null) {
-        cancelledAt = "manual-path-input";
-        await emitWitnessEvent({
-          workspaceRoot,
-          eventName: "witness.artifact_maintenance.validated",
-          commandId: "witness.validateArtifactMaintenance",
-          sessionId: null,
-          status: "cancelled",
-          durationMs: elapsed(),
-          attributes: {
-            status: validationStatus,
-            issue_count: issueCount,
-            changed_witness_file_count: changedWitnessFileCount,
-            changed_non_witness_file_count: changedNonWitnessFileCount,
-            expected_kind: expectedKindLabel,
-            completed,
-            cancelled_at: cancelledAt,
-          },
-        });
-        return;
-      }
-      changedFiles = manualResult;
+      return;
     }
 
     // -------------------------------------------------------------------------
@@ -490,15 +663,15 @@ export async function validateArtifactMaintenanceCmd(
     // Show a brief status notification.
     if (result.status === "failed") {
       vscode.window.showErrorMessage(
-        "Witness: Validation failed. Non-.witness files were modified. Review the report."
+        "Witness: Check Memory Update failed. Non-.witness files were modified. Review the report."
       );
     } else if (result.status === "warning") {
       vscode.window.showWarningMessage(
-        "Witness: Validation warning. Review the report before approving the artifact."
+        "Witness: Check Memory Update warning. Review the report before approving the artifact."
       );
     } else {
       vscode.window.showInformationMessage(
-        "Witness: Validation passed. Review the artifact and approve if satisfied."
+        "Witness: Check Memory Update passed. Continue coding, run Witness: Save Progress again later, or run Witness: Resume next time."
       );
     }
 

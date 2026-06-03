@@ -48,6 +48,15 @@ Before drafting the update, observe and record:
 
 If any evidence item is unavailable, record it explicitly as unknown or uncertain.
 
+## Placeholder Rules
+
+- Replace obvious placeholders only with confirmed project files or developer-provided facts.
+- Do not invent project purpose, architecture, stack, or status.
+- If uncertain, write `Unknown` or `To be confirmed`.
+- Record files changed, implementation outcome, validation results, and next safe step.
+- Update the active session file only if the Save Progress flow explicitly asks for it.
+- Mention remaining uncertainty.
+
 ---
 
 ## Allowed Writes
@@ -55,6 +64,8 @@ If any evidence item is unavailable, record it explicitly as unknown or uncertai
 You may write only to:
 
 1. `.witness/current-state.md`
+2. `.witness/sessions/<active-session-id>.md` only if the Save Progress flow explicitly asks you
+   to update the active session record.
 
 No other file may be created, modified, or deleted in this task.
 
@@ -67,8 +78,8 @@ No other file may be created, modified, or deleted in this task.
 - Do not delete previous Witness artifacts.
 - Do not claim tests passed unless test output exists.
 - Stop for human review after drafting the artifact.
-- Do not write to `.witness/handovers/`, `.witness/sessions/`, `.witness/subagents/`,
-  `.witness/telemetry/`, or any file outside `.witness/current-state.md`.
+- Do not write to `.witness/handovers/`, `.witness/subagents/`, `.witness/telemetry/`, or any file
+  outside the allowed current-state and explicitly requested active session files.
 - Do not infer a goal, risk, or next action that is not present in the evidence.
   If the evidence is insufficient, say so in the Uncertainty section.
 
@@ -103,7 +114,8 @@ Before presenting the draft for review, confirm:
 - [ ] Evidence Used names the files you read and the facts you extracted from them.
 - [ ] Uncertainty notes any gaps, conflicts, or inferences explicitly.
 - [ ] No source files were modified.
-- [ ] No files outside `.witness/current-state.md` were written.
+- [ ] No files outside `.witness/current-state.md` and any explicitly requested active session file
+      were written.
 
 ---
 

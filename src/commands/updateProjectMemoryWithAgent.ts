@@ -294,7 +294,7 @@ export async function updateProjectMemoryWithAgent(
 
     const presentResult = await presentPrompt(
       generated.prompt,
-      'Witness: Prompt ready. Paste it into your coding agent, then review the artifact changes.'
+      'Witness: Prompt ready. Paste this into your coding agent. After it updates `.witness/`, run `Witness: Check Memory Update`.'
     );
     promptOpened = presentResult.promptOpened;
     copiedToClipboard = presentResult.copiedToClipboard;

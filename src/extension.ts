@@ -6,6 +6,7 @@ import { startWithWitness } from './commands/startWithWitness';
 import { startNewTask } from './commands/startNewTask';
 import { startTrackingTask } from './commands/startTrackingTask';
 import { createCheckpoint } from './commands/createCheckpoint';
+import { saveProgress } from './commands/saveProgress';
 import { resumeWithWitness } from './commands/resumeWithWitness';
 import { updateProjectMemoryWithAgent } from './commands/updateProjectMemoryWithAgent';
 import { validateArtifactMaintenanceCmd } from './commands/validateArtifactMaintenance';
@@ -252,7 +253,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
   const saveProgressAliasCmd = vscode.commands.registerCommand(
     'witness.saveProgress',
-    () => vscode.commands.executeCommand('witness.createCheckpoint')
+    () => saveProgress(context)
   );
   context.subscriptions.push(saveProgressAliasCmd);
 

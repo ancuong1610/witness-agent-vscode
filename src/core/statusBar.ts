@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// statusBar.ts — Witness status bar assistant (v8.3).
+// statusBar.ts — Witness status bar assistant (v9.2).
 // ---------------------------------------------------------------------------
 //
 // Displays current continuity state in the VS Code status bar and offers a
@@ -16,11 +16,16 @@
 // Actions, moves maintenance aliases into their own section, and keeps
 // technical/original commands under More Actions.
 //
+// v9.2 change: the label uses a Tracking grace state after Start. Stale or
+// placeholder current-state evidence alone does not show Save Needed until
+// source-work evidence or a stronger maintenance need exists.
+//
 // Design invariants:
 //   - One status bar item, created in `initializeWitnessStatusBar` and never
 //     recreated. Disposed via context.subscriptions.
-//   - Status is recomputed on activation, after `.witness/` file changes
-//     (debounced 2000 ms), and after QuickPick command execution.
+//   - Status is recomputed on activation, after workspace file saves
+//     (debounced 2000 ms), after `.witness/` file changes, and after QuickPick
+//     command execution.
 //   - No timers other than the artifact-change debounce.
 //   - No continuous scanning.
 //   - Does not throw to extension activation on status computation failure.
@@ -36,10 +41,9 @@ import * as vscode from 'vscode';
 import { getWorkspaceRoot } from './witnessPaths';
 import { computeWorkspaceStatus, WitnessWorkspaceStatus } from './workspaceStatus';
 import { resolveTopIssue } from './continuityResolver';
-import {
-  computeMaintenanceNeed,
-  MaintenanceNeedKind,
-} from './maintenanceTriggerEngine';
+import { computeMaintenanceNeed } from './maintenanceTriggerEngine';
+import { observeGit } from './gitObserver';
+import { statusLabel } from './statusLabel';
 
 // ---------------------------------------------------------------------------
 // Module-level state
@@ -53,6 +57,12 @@ let statusBarItem: vscode.StatusBarItem | undefined;
  * yet been computed or computation failed.
  */
 let latestStatus: WitnessWorkspaceStatus | null = null;
+
+/**
+ * Whether the latest refresh observed source-work evidence outside `.witness/`.
+ * `undefined` means the signal was unavailable (for example, non-git workspace).
+ */
+let latestMeaningfulWorkEvidence: boolean | undefined;
 
 /** Timer handle for the `.witness/` artifact-change debounce. */
 let saveDebounceTimer: ReturnType<typeof setTimeout> | null = null;
@@ -75,68 +85,6 @@ const WITNESS_ARTIFACT_GLOB = '**/.witness/**';
  * status bar item only.
  */
 const STATUS_ACTIONS_COMMAND = 'witness.openStatusActions';
-
-// ---------------------------------------------------------------------------
-// Label mapping
-// ---------------------------------------------------------------------------
-
-/**
- * Maps the current `WitnessWorkspaceStatus` to the status bar text label.
- *
- * Label priority:
- *   1. No workspace root        → `Witness: No Workspace`
- *   2. activeSessionId is null  → `Witness: Start`
- *   3. severity critical        → `Witness: Attention`
- *   4. maintenance save need    → `Witness: Save Needed`
- *   5. subagent review need     → `Witness: Review Needed`
- *   6. severity warning         → `Witness: Review Needed`
- *   7. info + id not all-clear  → `Witness: Checkpoint`
- *   8. info + id all-clear      → `Witness: OK`
- */
-function statusLabel(status: WitnessWorkspaceStatus | null, hasWorkspace: boolean): string {
-  if (!hasWorkspace) {
-    return 'Witness: No Workspace';
-  }
-  if (status === null) {
-    return 'Witness: Status Error';
-  }
-  if (status.activeSessionId === null) {
-    return 'Witness: Start';
-  }
-  const { severity, id } = status.suggestedAction;
-  if (severity === 'critical') {
-    return 'Witness: Attention';
-  }
-
-  try {
-    const need = computeMaintenanceNeed({ status });
-    if (isSaveMaintenanceNeed(need.kind)) {
-      return 'Witness: Save Needed';
-    }
-    if (need.kind === 'review-subagent-artifacts') {
-      return 'Witness: Review Needed';
-    }
-  } catch {
-    // Non-fatal: fall back to the legacy severity/id mapping.
-  }
-
-  if (severity === 'warning') {
-    return 'Witness: Review Needed';
-  }
-  // severity === 'info'
-  if (id === 'all-clear') {
-    return 'Witness: OK';
-  }
-  return 'Witness: Checkpoint';
-}
-
-function isSaveMaintenanceNeed(kind: MaintenanceNeedKind): boolean {
-  return (
-    kind === 'update-current-state' ||
-    kind === 'create-checkpoint' ||
-    kind === 'prepare-handover'
-  );
-}
 
 // ---------------------------------------------------------------------------
 // Tooltip formatting
@@ -186,7 +134,8 @@ function formatExistsAge(exists: boolean, ageMinutes: number | null): string {
  */
 function buildTooltip(
   status: WitnessWorkspaceStatus | null,
-  hasWorkspace: boolean
+  hasWorkspace: boolean,
+  hasMeaningfulWorkEvidence?: boolean
 ): vscode.MarkdownString {
   const md = new vscode.MarkdownString();
 
@@ -205,7 +154,7 @@ function buildTooltip(
   }
 
   // --- Title: current status bar label ---
-  const label = statusLabel(status, true);
+  const label = statusLabel(status, true, undefined, { hasMeaningfulWorkEvidence });
   md.appendMarkdown(`**${label}**\n\n`);
 
   // --- Session ---
@@ -289,6 +238,31 @@ function statusColor(
     return new vscode.ThemeColor('statusBarItem.warningBackground');
   }
   return undefined;
+}
+
+async function detectMeaningfulWorkEvidence(
+  workspaceRoot: vscode.Uri
+): Promise<boolean | undefined> {
+  const git = await observeGit(workspaceRoot);
+  const dirtyPaths = git.primary?.dirtyFilePaths;
+  if (dirtyPaths === undefined) {
+    return undefined;
+  }
+
+  return dirtyPaths.some(isNonWitnessPath);
+}
+
+function isNonWitnessPath(filePath: string): boolean {
+  const normalized = filePath.replace(/\\/g, '/');
+  return !(
+    normalized === '.witness' ||
+    normalized.startsWith('.witness/')
+  );
+}
+
+function isInsideWorkspace(filePath: string, workspaceRoot: vscode.Uri): boolean {
+  const relative = path.relative(workspaceRoot.fsPath, filePath);
+  return relative.length > 0 && !relative.startsWith('..') && !path.isAbsolute(relative);
 }
 
 // ---------------------------------------------------------------------------
@@ -703,6 +677,7 @@ export async function refreshWitnessStatusBar(): Promise<void> {
 
   if (!hasWorkspace) {
     latestStatus = null;
+    latestMeaningfulWorkEvidence = undefined;
     statusBarItem.text = statusLabel(null, false);
     statusBarItem.tooltip = buildTooltip(null, false);
     statusBarItem.backgroundColor = undefined;
@@ -712,14 +687,22 @@ export async function refreshWitnessStatusBar(): Promise<void> {
 
   try {
     latestStatus = await computeWorkspaceStatus(workspaceRoot!);
+    latestMeaningfulWorkEvidence = await detectMeaningfulWorkEvidence(workspaceRoot!);
   } catch {
     // computeWorkspaceStatus should never throw (it has its own catch-all),
     // but guard here to be safe.
     latestStatus = null;
+    latestMeaningfulWorkEvidence = undefined;
   }
 
-  statusBarItem.text = statusLabel(latestStatus, hasWorkspace);
-  statusBarItem.tooltip = buildTooltip(latestStatus, hasWorkspace);
+  statusBarItem.text = statusLabel(latestStatus, hasWorkspace, undefined, {
+    hasMeaningfulWorkEvidence: latestMeaningfulWorkEvidence,
+  });
+  statusBarItem.tooltip = buildTooltip(
+    latestStatus,
+    hasWorkspace,
+    latestMeaningfulWorkEvidence
+  );
   statusBarItem.backgroundColor = statusColor(latestStatus);
   statusBarItem.show();
 }
@@ -803,13 +786,12 @@ export function initializeWitnessStatusBar(context: vscode.ExtensionContext): vo
   );
   context.subscriptions.push(statusActionsCmd);
 
-  // Register the .witness/ file save listener with debounce.
+  // Register a workspace file save listener with debounce. Source saves allow
+  // v9.2 Tracking -> Save Needed transitions after meaningful work evidence;
+  // .witness saves still refresh artifact-driven status immediately.
   const saveListener = vscode.workspace.onDidSaveTextDocument(document => {
-    // Only refresh when the saved file is inside a .witness/ directory.
-    const fsPath = document.uri.fsPath;
-    const separator = path.sep;
-    const witnessSegment = `${separator}.witness${separator}`;
-    if (!fsPath.includes(witnessSegment) && !fsPath.includes('/.witness/')) {
+    const workspaceRoot = getWorkspaceRoot();
+    if (!workspaceRoot || !isInsideWorkspace(document.uri.fsPath, workspaceRoot)) {
       return;
     }
 

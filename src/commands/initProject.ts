@@ -22,6 +22,7 @@ import {
   createCommandTimer,
   emitWitnessEvent,
 } from '../core/telemetryWriter';
+import { writeVersionMetadata } from '../core/witnessProjectMigration';
 
 // ---------------------------------------------------------------------------
 // Shared init result type
@@ -109,6 +110,8 @@ export async function performProjectInit(
     const destUri = vscode.Uri.joinPath(harnessDir, filename);
     await writeFileIfMissing(destUri, content);
   }
+
+  await writeVersionMetadata(witnessRoot);
 
   return {
     subdirsCreated: WITNESS_SUBDIRS.length,
